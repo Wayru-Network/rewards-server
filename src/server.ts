@@ -3,10 +3,13 @@ import bodyParser from "koa-bodyparser";
 import logger from "koa-logger";
 import { errorHandler } from "./middlewares/auth-validator";
 import { dbErrorHandler } from "@middlewares/db-error-handler";
+import { initializeCronJobs } from "@crons/index";
 import { ENV } from "@config/env/env";
 
-const app = new Koa();
+// initialize cron jobs
+initializeCronJobs();
 
+const app = new Koa();
 // Middlewares
 app.use(logger());
 app.use(bodyParser());
