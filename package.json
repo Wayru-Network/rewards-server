@@ -1,9 +1,9 @@
 {
-  "name": "solana-sign-service",
+  "name": "rewards-server",
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
-  "type": "module",
+  "type": "commonjs",
   "scripts": {
     "dev": "tsx src/server.ts",
     "build": "tsc",
@@ -18,13 +18,15 @@
     "dotenv": "^16.4.7",
     "koa": "^2.15.3",
     "koa-bodyparser": "^4.4.1",
-    "koa-logger": "^3.2.1"
+    "koa-logger": "^3.2.1",
+    "pg": "^8.14.1"
   },
   "devDependencies": {
     "@types/koa": "^2.15.0",
     "@types/koa-bodyparser": "^4.3.12",
     "@types/koa-logger": "^3.1.5",
     "@types/node": "^22.10.10",
+    "@types/pg": "^8.11.11",
     "tsx": "^4.19.2",
     "typescript": "^5.4.5"
   }
