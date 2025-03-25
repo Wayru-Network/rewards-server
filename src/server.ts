@@ -5,9 +5,12 @@ import { errorHandler } from "./middlewares/auth-validator";
 import { dbErrorHandler } from "@middlewares/db-error-handler";
 import { initializeCronJobs } from "@crons/index";
 import { ENV } from "@config/env/env";
+import { initializeRabbitMQ } from "@services/rabbitmq-wrapper/rabbitmq.service";
 
 // initialize cron jobs
 initializeCronJobs();
+// initialize rabbitmq
+initializeRabbitMQ();
 
 const app = new Koa();
 // Middlewares

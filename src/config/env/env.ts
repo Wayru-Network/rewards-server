@@ -1,13 +1,22 @@
+import { ENV_CONFIG } from '@interfaces/configs/env';
 import 'dotenv/config';
 
-export const ENV = {
-    PORT: process.env.PORT || 1335,
-    DATABASE_HOST: process.env.DATABASE_HOST || 'localhost',
-    DATABASE_PORT: process.env.DATABASE_PORT || '5432',
-    DATABASE_NAME: process.env.DATABASE_NAME || 'database',
-    DATABASE_USERNAME: process.env.DATABASE_USERNAME || 'user',
-    DATABASE_PASSWORD: process.env.DATABASE_PASSWORD || 'password',
-    DATABASE_SSL: process.env.DATABASE_SSL === 'true',
-    NODE_ENV: process.env.NODE_ENV || 'develop',
-    DB_ADMIN_PUBLIC_KEY: process.env.DB_ADMIN_PUBLIC_KEY || '',
-  };
+export const ENV: ENV_CONFIG = {
+  PORT: process.env.PORT || 1335,
+  DATABASE_HOST: process.env.DATABASE_HOST || 'localhost',
+  DATABASE_PORT: process.env.DATABASE_PORT || '5432',
+  DATABASE_NAME: process.env.DATABASE_NAME || 'database',
+  DATABASE_USERNAME: process.env.DATABASE_USERNAME || 'user',
+  DATABASE_PASSWORD: process.env.DATABASE_PASSWORD || 'password',
+  DATABASE_SSL: process.env.DATABASE_SSL === 'true',
+  NODE_ENV: process.env.NODE_ENV || 'develop',
+  DB_ADMIN_PUBLIC_KEY: process.env.DB_ADMIN_PUBLIC_KEY || '',
+  REWARDS_PERIOD: process.env.REWARDS_PERIOD === 'mainnet' ? 'mainnet' : 'testnet-2',
+  SOLANA_ENV: (process.env.SOLANA_ENV as 'mainnet' | 'devnet') || 'devnet',
+  NAS_API: process.env.NAS_API || 'https://nas.api.tech',
+  NAS_API_KEY: process.env.NAS_API_KEY || '121212',
+  RABBIT_USER: process.env.RABBIT_USER || 'guest',
+  RABBIT_PASS: process.env.RABBIT_PASS || 'guest',
+  RABBIT_HOST: process.env.RABBIT_HOST || 'localhost',
+  RABBIT_RESPONSE_QUEUE: process.env.RABBIT_RESPONSE_QUEUE || 'response_queue',
+};
