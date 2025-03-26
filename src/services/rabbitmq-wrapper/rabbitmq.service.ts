@@ -2,7 +2,7 @@ import { ConsumeMessage, Channel } from 'amqplib';
 import * as amqp from 'amqp-connection-manager';
 import { ChannelWrapper, AmqpConnectionManager } from 'amqp-connection-manager';
 import { v4 as uuidv4 } from 'uuid';
-import { MessageProcessor, QueueName, RabbitConfig } from '@interfaces/rabbitmq-wrapper';
+import { MessageProcessor, RabbitConfig } from '@interfaces/rabbitmq-wrapper';
 import { QueueConfig } from '@interfaces/rabbitmq-wrapper';
 import { ENV } from '@config/env/env';
 
@@ -14,7 +14,7 @@ class RabbitWrapper {
     private static instance: RabbitWrapper;
 
     private constructor() {
-        this.queues = Object.values(QueueName).map(name => ({
+        this.queues = Object.values(ENV.RABBIT_QUEUES).map(name => ({
             name,
             durable: true,
             asserted: false
@@ -52,11 +52,11 @@ class RabbitWrapper {
 
             this.connection = amqp.connect([connectionUrl]);
             this.channel = this.connection.createChannel({
-                json: true,
+                json: false,
                 setup: async (channel: Channel) => {
                     // Assert all queues
                     await Promise.all([
-                        ...this.queues.map(queue => 
+                        ...this.queues.map(queue =>
                             channel.assertQueue(queue.name, { durable: queue.durable })
                         ),
                         channel.assertQueue(responseQueue, { durable: true })
@@ -67,30 +67,30 @@ class RabbitWrapper {
 
             // Setup error handlers
             this.connection.on('connect', () => {
-                console.log('Successfully connected to RabbitMQ');
+                console.log('🔌 Successfully connected to RabbitMQ');
             });
 
             this.connection.on('disconnect', (err) => {
-                console.log('Disconnected from RabbitMQ', err);
-            });
+                console.log('🔌 Disconnected from RabbitMQ', err);
+            }); 
 
             await this.channel.waitForConnect();
-            console.log('Channel ready');
+            console.log('🔌 Channel ready');
         } catch (error) {
-            console.error('Failed to connect to RabbitMQ:', error);
+            console.error('🚨 Failed to connect to RabbitMQ:', error);
             throw error;
         }
     }
 
     public async sendMessage<T>(
         message: T,
-        queue: QueueName,
+        queue: string,
         correlationId: string = uuidv4()
     ): Promise<boolean> {
         try {
             const queueConfig = this.queues.find(q => q.name === queue);
             if (!queueConfig) throw new Error(`Queue ${queue} not found`);
-
+            console.log('sending message to queue', message)
             await this.channel.sendToQueue(queue, Buffer.from(JSON.stringify(message)), {
                 persistent: true,
                 correlationId,
@@ -104,7 +104,7 @@ class RabbitWrapper {
         }
     }
 
-    public async consumeResponse(processor: MessageProcessor, queueName: QueueName): Promise<void> {
+    public async consumeResponse(processor: MessageProcessor, queueName: string): Promise<void> {
         try {
             const queue = this.queues.find(q => q.name === queueName);
             if (!queue) throw new Error(`Queue ${queueName} not found`);
@@ -112,12 +112,12 @@ class RabbitWrapper {
             await this.channel.addSetup(async (channel: Channel) => {
                 // First we configure the prefetch
                 await channel.prefetch(5);
-                
+
                 // Then we configure the consumer
                 return channel.consume(
                     queueName,
                     msg => msg && this.processMessage(processor, msg),
-                    { 
+                    {
                         noAck: false,
                     }
                 );
@@ -146,9 +146,9 @@ export const initializeRabbitMQ = async () => {
             user: ENV.RABBIT_USER,
             pass: ENV.RABBIT_PASS,
             host: ENV.RABBIT_HOST,
-            responseQueue: ENV.RABBIT_RESPONSE_QUEUE
+            responseQueue: ENV.RABBIT_QUEUES.WUBI_API_QUEUE_RESPONSE
         });
-        console.log('RabbitMQ initialized');
+        console.log('🐇 RabbitMQ initialized');
     } catch (error) {
         console.error('Failed to initialize RabbitMQ:', error);
         throw error;

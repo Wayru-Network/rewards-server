@@ -18,5 +18,8 @@ export const ENV: ENV_CONFIG = {
   RABBIT_USER: process.env.RABBIT_USER || 'guest',
   RABBIT_PASS: process.env.RABBIT_PASS || 'guest',
   RABBIT_HOST: process.env.RABBIT_HOST || 'localhost',
-  RABBIT_RESPONSE_QUEUE: process.env.RABBIT_RESPONSE_QUEUE || 'response_queue',
+  RABBIT_QUEUES: {
+    WUBI_API_QUEUE: process.env.WUBI_API_QUEUE || 'wifi_api_queue_david',
+    WUBI_API_QUEUE_RESPONSE: process.env.WUBI_API_QUEUE_RESPONSE || 'reward_server_local',
+  }
 };

@@ -17,6 +17,9 @@ export type ENV_CONFIG = {
   RABBIT_USER: string,
   RABBIT_PASS: string,
   RABBIT_HOST: string,
-  RABBIT_RESPONSE_QUEUE: string,
+  RABBIT_QUEUES: {
+    WUBI_API_QUEUE: string,
+    WUBI_API_QUEUE_RESPONSE: string,
+  }
 };
 

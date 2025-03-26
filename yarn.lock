@@ -424,7 +424,7 @@ amqp-connection-manager@^4.1.14:
   dependencies:
     promise-breaker "^6.0.0"
 
-amqplib@^0.10.5:
+amqplib@^0.10.4:
   version "0.10.5"
   resolved "https://registry.yarnpkg.com/amqplib/-/amqplib-0.10.5.tgz#2b217a3c56f2935ee2e36206bfd7e25ee866491f"
   integrity sha512-Dx5zmy0Ur+Q7LPPdhz+jx5IzmJBoHd15tOeAfQ8SuvEtyPJ20hBemhOBA4b1WeORCRa0ENM/kHCzmem1w/zHvQ==

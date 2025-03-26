@@ -16,7 +16,7 @@
     "@koa/router": "^13.1.0",
     "@solana/web3.js": "1.98.0",
     "amqp-connection-manager": "^4.1.14",
-    "amqplib": "^0.10.5",
+    "amqplib": "^0.10.4",
     "axios": "^1.8.4",
     "dotenv": "^16.4.7",
     "koa": "^2.15.3",

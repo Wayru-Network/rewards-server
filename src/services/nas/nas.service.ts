@@ -26,7 +26,6 @@ export async function checkSync(epochDate: string): Promise<{ ready: boolean; pe
       }
   
       const { ready, pending, epoch } = response.data.data
-      console.log('Sync check response:', { ready, pending, epoch })
   
       return {
         ready,

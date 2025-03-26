@@ -3,29 +3,36 @@ import bodyParser from "koa-bodyparser";
 import logger from "koa-logger";
 import { errorHandler } from "./middlewares/auth-validator";
 import { dbErrorHandler } from "@middlewares/db-error-handler";
-import { initializeCronJobs } from "@crons/index";
 import { ENV } from "@config/env/env";
-import { initializeRabbitMQ } from "@services/rabbitmq-wrapper/rabbitmq.service";
+import { bootstrap } from "@bootstrap";
+import { shutdown } from "@bootstrap/shutdown";
 
-// initialize cron jobs
-initializeCronJobs();
-// initialize rabbitmq
-initializeRabbitMQ();
 
+// start server app and services
 const app = new Koa();
+
 // Middlewares
 app.use(logger());
 app.use(bodyParser());
 app.use(errorHandler);
 app.use(dbErrorHandler);
+
 // Global error handling
 app.on('error', (err, ctx) => {
   console.error('Server Error:', err);
+  shutdown(); // shutdown all services if error
 });
-// Routes
 
 // Initialize server
 const PORT = Number(ENV.PORT);
 app.listen(PORT, '0.0.0.0', () => {
-  console.log(`Server is running on http://localhost:${PORT}`);
+  console.log(`🚀 Server is running on http://localhost:${PORT}`);
+  console.log('*************************************************')
+});
+
+// start all services
+bootstrap().catch(err => {
+  console.error('Failed to start services:', err);
+  shutdown(); // shutdown all services if error
+  process.exit(1);
 });

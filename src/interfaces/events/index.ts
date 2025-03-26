@@ -1,0 +1,51 @@
+import EventEmitter from "events";
+
+export interface EventMap {
+    'beforeAssignRewards': {
+        type: 'last_item_wubi' | 'last_item_wupi';
+        epochId: number;
+    };
+    'rewardsAssigned': {
+        epochId: number;
+        success: boolean;
+    };
+    // ...others events
+}
+
+export class EventHub extends EventEmitter {
+    emit<K extends keyof EventMap>(event: K, data: EventMap[K]): boolean {
+        return super.emit(event, data);
+    }
+
+    on<K extends keyof EventMap>(
+        event: K,
+        listener: (data: EventMap[K]) => void
+    ): this {
+        return super.on(event, listener);
+    }
+}
+
+export enum EventName {
+    BEFORE_ASSIGN_REWARDS = 'beforeAssignRewards',
+    REWARDS_ASSIGNED = 'rewardsAssigned'
+}
+
+export interface EventMap {
+    [EventName.BEFORE_ASSIGN_REWARDS]: {
+        type: 'last_item_wubi' | 'last_item_wupi';
+        epochId: number;
+    };
+    [EventName.REWARDS_ASSIGNED]: {
+        epochId: number;
+        success: boolean;
+    };
+    // ...others events
+}
+
+declare global {
+    namespace NodeJS {
+        interface Global {
+            eventHub: EventHub;
+        }
+    }
+}

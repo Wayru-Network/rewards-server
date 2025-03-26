@@ -36,3 +36,22 @@ export const getActiveWupiNfNodes = async () => {
       `)
   return rows as NFNodeIdAndWayruDeviceId[]
 }
+
+export const getNfNodeByWayruDeviceId = async (wayruDeviceId: string) => {
+  const { rows } = await pool.query(`
+        SELECT * FROM nfnodes WHERE wayru_device_id = $1
+      `, [wayruDeviceId])
+  const document = rows?.length ? rows[0] : null
+  return document as NfNode
+}
+
+export const getNfNodeMultiplier = (nfnode: NfNode) => multipliers[nfnode?.model || ''] || 1
+
+
+const multipliers: { [key: string]: number } = {
+  BYOD: 1,
+  Apocalypse: 1.25,
+  Eclypse: 1.5,
+  Prometheus: 2,
+  Genesis: 3,
+}
