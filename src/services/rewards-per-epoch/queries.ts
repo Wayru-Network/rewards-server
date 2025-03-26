@@ -4,11 +4,12 @@ import { RewardPerEpochEntry } from "@interfaces/rewards-per-epoch"
 
 export const createRewardsPerEpoch = async (payload: RewardPerEpochEntry) => {
     try {
-        const { 
+        const {
             host_payment_status, hotspot_score, amount, currency,
             status, nfnode, owner_payment_status, type, pool_per_epoch
         } = payload
-        if (!type || !pool_per_epoch || !hotspot_score || !nfnode || !owner_payment_status || !host_payment_status) {
+        if (!type || !pool_per_epoch || 
+            typeof hotspot_score !== 'number' || !nfnode || !owner_payment_status || !host_payment_status) {
             console.error('missing requires parameters')
             return undefined
         }
@@ -20,7 +21,7 @@ export const createRewardsPerEpoch = async (payload: RewardPerEpochEntry) => {
             INSERT INTO rewards_per_epoches (type, hotspot_score, amount, owner_payment_status, host_payment_status, status, currency)
             VALUES ($1, $2, $3, $4, $5, $6, $7)
             RETURNING id
-        `, [type, hotspot_score, amount, owner_payment_status, host_payment_status, status, currency]);
+        `, [type, hotspot_score, amount ?? 0, owner_payment_status, host_payment_status, status, currency]);
 
         // 2. Insert in rewards_per_epoches_nfnode_links table
         await pool.query(`
