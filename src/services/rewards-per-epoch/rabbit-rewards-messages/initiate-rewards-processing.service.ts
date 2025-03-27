@@ -5,9 +5,12 @@ import { logProgress, processInChunks, withRetry } from "@helpers/rewards-per-ep
 import { NFNodeIdAndWayruDeviceId } from "@interfaces/nfnodes";
 import { PoolPerEpoch } from "@interfaces/pool-per-epoch";
 import { getActiveWubiNfNodes, getActiveWupiNfNodes } from "@services/nfnodes/queries";
-import { createCurrentPoolPerEpoch, getPoolPerEpochAmount, getPoolPerEpochById, getPoolPerEpochNumber, updatePoolPerEpochById } from "@services/pool-per-epoch/queries";
+import { createCurrentPoolPerEpoch, getPoolPerEpochById, getPoolPerEpochNumber, updatePoolPerEpochById } from "@services/pool-per-epoch/queries";
+import { getPoolPerEpochAmount } from "@services/pool-per-epoch/pool-per-epoch.service";
 import { rabbitWrapper } from '@services/rabbitmq-wrapper/rabbitmq.service';
 import moment from 'moment'
+import { eventHub } from "@services/events/event-hub";
+import { EventName } from "@interfaces/events";
 
 // function to initiate the rewards processing
 export const initiateRewardsProcessing = async (poolId?: number):
@@ -16,7 +19,8 @@ export const initiateRewardsProcessing = async (poolId?: number):
         // await 10 seconds to start the process,
         //TODO: remove this after testing
         await new Promise(resolve => setTimeout(resolve, 10000));
-
+        // get the start time of the process
+        const startTime = Date.now()
 
         // get the epoch
         let [epoch, wubiNFNodes, wupiNFNodes] = await Promise.all([
@@ -28,6 +32,13 @@ export const initiateRewardsProcessing = async (poolId?: number):
             console.log('No epoch found, ending process');
             return { error: true, message: 'No epoch found' };
         }
+        // emit the event that the rewards process has started
+        eventHub.emit(EventName.REWARDS_PROCESS_STARTED, {
+            startTime,
+            totalWubiNodes: wubiNFNodes.length,
+            totalWupiNodes: wupiNFNodes.length,
+            epochId: epoch.id
+        })
 
         // get the epoch number & wayru earned
         const epochNumber = await getPoolPerEpochNumber(epoch.epoch)
@@ -60,7 +71,7 @@ export const initiateRewardsProcessing = async (poolId?: number):
 
         // now process the nfnodes and calculate their scores
         await processWUBIWithConcurrency(wubiNFNodes, epoch)
-        processWUPIWithConcurrency(wupiNFNodes, epoch)
+        //processWUPIWithConcurrency(wupiNFNodes, epoch) // TODO: uncomment this when wupi rewards are ready
         return { error: false, epoch: epoch }
     } catch (error) {
         console.error('error processing rewards per epoch', error)

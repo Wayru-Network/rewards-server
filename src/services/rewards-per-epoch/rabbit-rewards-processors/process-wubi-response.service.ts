@@ -43,7 +43,6 @@ export const processWubiRabbitResponse = async (msg: ConsumeMessage) => {
     }
     // check if last item is true
     if (last_item) {
-        console.log('****** last reward created ******');
         // emit a event hub, when it is received, 
         // it will initiate to calculate amount of rewards
         eventHub.emit(EventName.LAST_REWARD_CREATED, {

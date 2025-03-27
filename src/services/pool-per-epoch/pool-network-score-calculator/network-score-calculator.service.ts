@@ -2,9 +2,10 @@ import pool from "@config/db";
 import { EventMap } from "@interfaces/events";
 import { EventName } from "@interfaces/events";
 import { eventHub } from "@services/events/event-hub";
-import { getPoolPerEpochAmounts, updatePoolNetworkScore } from "../queries";
+import { updatePoolNetworkScore } from "../queries";
 import { processRewardsBatch } from "@services/rewards-per-epoch/rewards-per-epoch.service";
 import { BATCH_SIZE_REWARDS } from "@constants";
+import { getPoolPerEpochAmounts } from "../pool-per-epoch.service";
 
 export class NetworkScoreCalculator {
     private static instance: NetworkScoreCalculator;
@@ -60,7 +61,6 @@ export class NetworkScoreCalculator {
 
     private async handleLastRewardCreated({ epochId, type }: EventMap[EventName.LAST_REWARD_CREATED]) {
         try {
-            console.log('****** handleLastRewardCreated ******');
             // Calculate network score total
             const { rows } = await pool.query(`
                 SELECT 
@@ -92,7 +92,6 @@ export class NetworkScoreCalculator {
     private async handleNetworkScoreCalculated({ epochId, networkScore, type }: EventMap[EventName.NETWORK_SCORE_CALCULATED]) {
         const client = await pool.connect();
         try {
-            console.log('****** handleNetworkScoreCalculated ******');
             await client.query('BEGIN');
 
             // Update epoch with network scores
@@ -104,20 +103,64 @@ export class NetworkScoreCalculator {
             }
             const totalRewardsAmount = type === 'wUBI' ? Number(totalRewards.ubiAmount) : Number(totalRewards.upiAmount)
 
-            // iterate over rewards in batch
-            for (let i = 0; i < rewards.length; i += BATCH_SIZE_REWARDS) {
-                const batch = rewards.slice(i, i + BATCH_SIZE_REWARDS);
-                console.log(`Processing batch ${i/BATCH_SIZE_REWARDS + 1} of ${Math.ceil(rewards.length/BATCH_SIZE_REWARDS)}`);
+            // Before the loop, add log of total
+            console.log(`Total rewards to process: ${rewards.length}`);
+
+            // Improve the batch processing
+            const totalBatches = Math.ceil(rewards.length / BATCH_SIZE_REWARDS);
+            let processedCount = 0;
+
+            for (let batchIndex = 0; batchIndex < totalBatches; batchIndex++) {
+                const start = batchIndex * BATCH_SIZE_REWARDS;
+                const end = Math.min(start + BATCH_SIZE_REWARDS, rewards.length);
+                const batch = rewards.slice(start, end);
+                
+                console.log(`Processing batch ${batchIndex + 1}/${totalBatches}:`, {
+                    batchSize: batch.length,
+                    startIndex: start,
+                    endIndex: end,
+                    processedSoFar: processedCount,
+                    remaining: rewards.length - processedCount
+                });
+
                 // process rewards batch
                 await processRewardsBatch({
                     rewards: batch,
                     networkScore,
                     totalRewardsAmount
                 });
+
+                processedCount += batch.length;
             }
 
-            console.log('****** Rewards processed and committed ******');
+            // At the end, verify that we processed everything
+            console.log('Batch processing completed:', {
+                totalRewards: rewards.length,
+                processed: processedCount,
+                verified: processedCount === rewards.length
+            });
+
+            if (processedCount !== rewards.length) {
+                console.error('⚠️ Mismatch in processed rewards:', {
+                    expected: rewards.length,
+                    actual: processedCount,
+                    difference: rewards.length - processedCount
+                });
+            }
+
             await client.query('COMMIT');
+
+            // emit event that the rewards process has completed
+            if (type === 'wUBI') {
+                eventHub.emit(EventName.WUBI_PROCESS_COMPLETED, {
+                    epochId,
+                });
+            } else {
+                eventHub.emit(EventName.WUPI_PROCESS_COMPLETED, {
+                    epochId,
+                });
+            }
+            
         } catch (error) {
             await client.query('ROLLBACK');
             console.error('Error updating rewards amounts:', error);

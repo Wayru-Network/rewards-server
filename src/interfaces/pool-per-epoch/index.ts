@@ -1,6 +1,6 @@
 import { RewardPerEpochEntry } from "@interfaces/rewards-per-epoch";
 
-
+type PoolPerEpochStatus = 'ready-for-claim' | 'processing'
 export interface PoolPerEpoch {
     id: number;
     epoch: Date;
@@ -8,6 +8,10 @@ export interface PoolPerEpoch {
     upi_pool: number
     network_score: number
     network_score_upi: number
+    status?: PoolPerEpochStatus
+    processing_metrics?: {
+        [key: string]: unknown
+      }
 }
 
 
