@@ -1,0 +1,73 @@
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rewards-server
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: rewards-server
+  template:
+    metadata:
+      labels:
+        app: rewards-server
+    spec:
+      containers:
+      - name: rewards-server
+        image: ${CONTAINER_REGISTRY}/rewards-server:${IMAGE_TAG}
+        env:
+            - name: DATABASE_HOST
+              value: "172.168.206.66"
+            - name: DATABASE_NAME
+              value: dashboard_prod_test
+            - name: DATABASE_PORT
+              value: "5432"
+            - name: DATABASE_USERNAME
+              value: REWARDS_SERVER
+            - name: NODE_ENV
+              value: develop
+            - name: PORT
+              value: "80"
+            - name: RABBIT_HOST
+              value: 52.189.31.214:5672
+            - name: WUBI_API_QUEUE
+              value: WIFI_API_QUEUE_DEV
+            - name: WUBI_API_QUEUE_RESPONSE
+              value: REWARDS_SERVER_DEV
+            - name: WUPI_API_QUEUE
+              value: NAS_API_QUEUE_DEV
+            - name: WUPI_API_QUEUE_RESPONSE
+              value: REWARDS_SERVER_WUPI_DEV
+            - name: NAS_API
+              value: https://nas.api.internal.wayru.tech
+            - name: NAS_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: rewards-server-secrets
+                  key: NAS_API_KEY
+            - name: DATABASE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: rewards-server-secrets
+                  key: DATABASE_PASSWORD
+            - name: RABBIT_PASS
+              valueFrom:
+                secretKeyRef:
+                  name: rewards-server-secrets
+                  key: RABBIT_PASS
+            - name: RABBIT_USER
+              valueFrom:
+                secretKeyRef:
+                  name: rewards-server-secrets
+                  key: RABBIT_USER
+            
+        ports:
+        - containerPort: 80
+        resources:
+          requests:
+            cpu: "100m"
+            memory: "128Mi"
+          limits:
+            cpu: "500m"
+            memory: "512Mi"
