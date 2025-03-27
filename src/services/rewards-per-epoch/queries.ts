@@ -3,45 +3,56 @@ import { RewardPerEpochEntry } from "@interfaces/rewards-per-epoch"
 
 
 export const createRewardsPerEpoch = async (payload: RewardPerEpochEntry) => {
+    const client = await pool.connect();
     try {
         const {
             host_payment_status, hotspot_score, amount, currency,
             status, nfnode, owner_payment_status, type, pool_per_epoch
-        } = payload
-        if (!type || !pool_per_epoch || 
-            typeof hotspot_score !== 'number' || !nfnode || !owner_payment_status || !host_payment_status) {
-            console.error('missing requires parameters')
-            return undefined
-        }
-        // start transaction
-        await pool.query('BEGIN');
+        } = payload;
 
-        // 1. Insert in rewards_per_epoches table
-        const { rows: [rewardPerEpoch] } = await pool.query(`
-            INSERT INTO rewards_per_epoches (type, hotspot_score, amount, owner_payment_status, host_payment_status, status, currency)
+        // start transaction
+        await client.query('BEGIN');
+
+        const insertResult = await client.query(`
+            INSERT INTO rewards_per_epoches 
+            (type, hotspot_score, amount, owner_payment_status, host_payment_status, status, currency)
             VALUES ($1, $2, $3, $4, $5, $6, $7)
             RETURNING id
         `, [type, hotspot_score, amount ?? 0, owner_payment_status, host_payment_status, status, currency]);
 
-        // 2. Insert in rewards_per_epoches_nfnode_links table
-        await pool.query(`
+        if (!insertResult.rows[0]?.id) {
+            throw new Error('Failed to insert into rewards_per_epoches');
+        }
+
+        const rewardId = insertResult.rows[0].id;
+
+        // verify that the record exists
+        const verifyResult = await client.query(`
+            SELECT id FROM rewards_per_epoches WHERE id = $1
+        `, [rewardId]);
+
+        if (!verifyResult.rows[0]) {
+            throw new Error(`Reward with ID ${rewardId} not found after insertion`);
+        }
+
+        // 2. Insert in rewards_per_epoches_nfnode_links
+        await client.query(`
             INSERT INTO rewards_per_epoches_nfnode_links 
             (rewards_per_epoch_id, nfnode_id)
             VALUES ($1, $2)
-        `, [rewardPerEpoch.id, nfnode]);
+        `, [rewardId, nfnode]);
 
-        // 3. Insert in rewards_per_epoches_pool_per_epoch_links table
-        await pool.query(`
+        // 3. Insert in rewards_per_epoches_pool_per_epoch_links
+        await client.query(`
             INSERT INTO rewards_per_epoches_pool_per_epoch_links
             (rewards_per_epoch_id, pool_per_epoch_id)
             VALUES ($1, $2)
-        `, [rewardPerEpoch.id, pool_per_epoch]);
+        `, [rewardId, pool_per_epoch]);
 
-        // Commit transaction
-        await pool.query('COMMIT');
+        await client.query('COMMIT');
 
-        // Return the document with theirs relations
-        const { rows: [result] } = await pool.query(`
+        // return the complete document
+        const { rows: [result] } = await client.query(`
             SELECT 
                 rpe.*,
                 n.id as nfnode_id,
@@ -52,13 +63,21 @@ export const createRewardsPerEpoch = async (payload: RewardPerEpochEntry) => {
             LEFT JOIN rewards_per_epoches_pool_per_epoch_links rpel ON rpel.rewards_per_epoch_id = rpe.id
             LEFT JOIN pool_per_epoch ppe ON ppe.id = rpel.pool_per_epoch_id
             WHERE rpe.id = $1
-        `, [rewardPerEpoch.id]);
+        `, [rewardId]);
 
         return result;
+
     } catch (error) {
-        // Revert the transaction in error case
-        await pool.query('ROLLBACK');
-        console.error('Error creating reward per epoch:', error);
-        return undefined
+        await client.query('ROLLBACK');
+        console.error('Error creating reward per epoch:', {
+            error,
+            payload,
+            errorMessage: (error as Error).message,
+            detail: (error as any).detail,
+            constraint: (error as any).constraint
+        });
+        throw error; // Propagate the error instead of returning undefined
+    } finally {
+        client.release();
     }
 };

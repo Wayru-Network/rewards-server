@@ -39,4 +39,4 @@ bootstrap().catch(err => {
 });
 
 
-initiateRewardsProcessing() // this is only for testing purposes
+// initiateRewardsProcessing() // this is only for testing purposes

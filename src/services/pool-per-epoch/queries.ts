@@ -1,7 +1,8 @@
 import { ENV } from "@config/env/env";
 import pool from "../../config/db";
-import { PoolPerEpoch, PoolPerEpochEntry } from "../../interfaces/pool-per-epoch";
+import { PoolPerEpoch, PoolPerEpochEntry, UpdatePoolNetworkScoreResponse } from "../../interfaces/pool-per-epoch";
 import moment from "moment";
+import { RewardPerEpochEntry } from "@interfaces/rewards-per-epoch";
 
 export const getPoolPerEpochById = async (epochId: number): Promise<PoolPerEpoch | null> => {
     try {
@@ -14,7 +15,7 @@ export const getPoolPerEpochById = async (epochId: number): Promise<PoolPerEpoch
     }
 }
 
-export const createCurrentPoolPerEpoch = async () : Promise<PoolPerEpoch | null> => {
+export const createCurrentPoolPerEpoch = async (): Promise<PoolPerEpoch | null> => {
     try {
         const lastEpochDateNumber = new Date().setDate(new Date().getDate() - 1)
         const lastEpochDate = new Date(lastEpochDateNumber)
@@ -33,13 +34,13 @@ export const createCurrentPoolPerEpoch = async () : Promise<PoolPerEpoch | null>
             upi_pool: wayruPoolUpi,
             network_score: 0,
             network_score_upi: 0,
-          }
-        
-          // insert into pool_per_epoch
-          const result = await pool.query('INSERT INTO pool_per_epoch (epoch, ubi_pool, upi_pool, network_score, network_score_upi) VALUES ($1, $2, $3, $4, $5)', [epochData.epoch, epochData.ubi_pool, epochData.upi_pool, epochData.network_score, epochData.network_score_upi]);
+        }
 
-          // return the document created
-          return result?.rows.length > 0 ? result.rows[0] : null
+        // insert into pool_per_epoch
+        const result = await pool.query('INSERT INTO pool_per_epoch (epoch, ubi_pool, upi_pool, network_score, network_score_upi) VALUES ($1, $2, $3, $4, $5) RETURNING *', [epochData.epoch, epochData.ubi_pool, epochData.upi_pool, epochData.network_score, epochData.network_score_upi]);
+
+        // return the document created
+        return result?.rows?.length > 0 ? result.rows[0] : null
     } catch (error) {
         console.error('createCurrentPoolPerEpoch error', error);
         return null;
@@ -227,4 +228,39 @@ export const updatePoolPerEpochById = async (id: number, data: Partial<PoolPerEp
         console.error('updatePoolPerEpoch error:', error);
         return null;
     }
+}
+
+export const updatePoolNetworkScore = async (epochId: number, networkScore: number, type: RewardPerEpochEntry['type']): Promise<UpdatePoolNetworkScoreResponse> => {
+    // First update the network scores
+    const { rows: [epoch] } = await pool.query(`
+         UPDATE pool_per_epoch
+        SET ${type === 'wUBI' ? 'network_score' : 'network_score_upi'} = $1
+        WHERE id = $2
+        RETURNING *
+    `, [networkScore ?? 0, epochId]) as { 
+        rows: PoolPerEpoch[]
+    };
+
+    // Get only the necessary fields from the rewards
+    const { rows: rewards } = await pool.query(`
+       SELECT 
+        rpe.id,
+        rpe.hotspot_score,
+        rpe.status,
+        rpe.type
+    FROM rewards_per_epoches rpe
+    INNER JOIN rewards_per_epoches_pool_per_epoch_links rel 
+        ON rel.rewards_per_epoch_id = rpe.id
+    WHERE rel.pool_per_epoch_id = $1
+        AND rpe.type = $2
+        AND rpe.status = 'calculating'
+        AND rpe.hotspot_score > 0
+    `, [epochId, type]) as { 
+        rows: UpdatePoolNetworkScoreResponse['rewards']
+    };
+
+    return {
+        epoch,
+        rewards
+    };
 }

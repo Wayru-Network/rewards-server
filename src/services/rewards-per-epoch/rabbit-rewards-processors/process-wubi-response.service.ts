@@ -7,18 +7,19 @@ import { EventName } from "@interfaces/events";
 
 export const processWubiRabbitResponse = async (msg: ConsumeMessage) => {
     try { 
-    console.log('****** new consume response ******');
     const { hotspot_score, wayru_device_id, epoch_id, last_item } = JSON.parse(msg.content.toString()) as {
         hotspot_score: number;
         wayru_device_id: string;
         epoch_id: number;
         last_item: boolean;
     }
-    console.log('hotspot_score', hotspot_score)
-    console.log('wayru_device_id', wayru_device_id)
-    console.log('epoch_id', epoch_id)
-    console.log('last_item', last_item)
-    if (typeof hotspot_score !== 'number' || !wayru_device_id || !epoch_id || !last_item) {
+
+    if (
+        typeof hotspot_score !== 'number' || 
+        !wayru_device_id || 
+        !epoch_id || 
+        typeof last_item !== 'boolean'
+    ) {
         console.error('invalid message')
         return
     }
@@ -42,11 +43,12 @@ export const processWubiRabbitResponse = async (msg: ConsumeMessage) => {
     }
     // check if last item is true
     if (last_item) {
+        console.log('****** last reward created ******');
         // emit a event hub, when it is received, 
         // it will initiate to calculate amount of rewards
-        eventHub.emit(EventName.BEFORE_ASSIGN_REWARDS, {
+        eventHub.emit(EventName.LAST_REWARD_CREATED, {
             epochId: epoch_id,
-            type: 'last_item_wubi'
+            type: 'wUBI'
         })
     }
     } catch (error) {

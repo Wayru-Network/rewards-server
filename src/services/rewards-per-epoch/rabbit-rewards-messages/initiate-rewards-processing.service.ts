@@ -13,6 +13,11 @@ import moment from 'moment'
 export const initiateRewardsProcessing = async (poolId?: number):
     Promise<{ error: boolean, message?: string, epoch?: PoolPerEpoch }> => {
     try {
+        // await 10 seconds to start the process,
+        //TODO: remove this after testing
+        await new Promise(resolve => setTimeout(resolve, 10000));
+
+
         // get the epoch
         let [epoch, wubiNFNodes, wupiNFNodes] = await Promise.all([
             poolId ? getPoolPerEpochById(poolId) : createCurrentPoolPerEpoch(),
@@ -54,8 +59,8 @@ export const initiateRewardsProcessing = async (poolId?: number):
         }
 
         // now process the nfnodes and calculate their scores
-        processWUBIWithConcurrency(wubiNFNodes, epoch)
-        //processWUPIWithConcurrency(wupiNFNodes, epoch)
+        await processWUBIWithConcurrency(wubiNFNodes, epoch)
+        processWUPIWithConcurrency(wupiNFNodes, epoch)
         return { error: false, epoch: epoch }
     } catch (error) {
         console.error('error processing rewards per epoch', error)
@@ -80,10 +85,8 @@ const processWUBIWithConcurrency = async (nfNodes: NFNodeIdAndWayruDeviceId[], p
                         .then(async () => {
                             await new Promise(resolve => setTimeout(resolve, TIME_DELAY));
                             return withRetry(async () => {
-                                const isLastItem = chunkIndex === chunks.length - 1 &&
-                                    index === chunk.length - 1;
+                                const isLastItem = (chunkIndex === chunks.length - 1) && (index === chunk.length - 1);
 
-                                console.log('sending wubi message', ENV.RABBIT_QUEUES.WUBI_API_QUEUE)
                                 const sentResult = await rabbitWrapper.sendMessage(
                                     {
                                         wayru_device_id: nfNode.wayru_device_id,
@@ -97,8 +100,6 @@ const processWUBIWithConcurrency = async (nfNodes: NFNodeIdAndWayruDeviceId[], p
                                 if (!sentResult) {
                                     throw new Error(`Failed to send message for NFNode ${nfNode.id}`);
                                 }
-
-                                console.log(`🚀 WUBI message sent for node ${nfNode.id}`);
 
                                 // Only show the last item processed message after sending it successfully
                                 if (isLastItem) {
@@ -154,9 +155,7 @@ const processWUPIWithConcurrency = async (nfNodes: NFNodeIdAndWayruDeviceId[], e
                         .then(async () => {
                             try {
                                 await new Promise((resolve) => setTimeout(resolve, TIME_DELAY));
-                                
-                                const isLastItem = chunkIndex === chunks.length - 1 &&
-                                    index === chunk.length - 1;
+                                const isLastItem = index === nfNodes.length - 1;
 
                                 const sentResult = await rabbitWrapper.sendMessage(
                                     {

@@ -1,3 +1,4 @@
+import { RewardPerEpochEntry } from "@interfaces/rewards-per-epoch";
 import EventEmitter from "events";
 
 export interface EventMap {
@@ -27,7 +28,8 @@ export class EventHub extends EventEmitter {
 
 export enum EventName {
     BEFORE_ASSIGN_REWARDS = 'beforeAssignRewards',
-    REWARDS_ASSIGNED = 'rewardsAssigned'
+    LAST_REWARD_CREATED = 'lastRewardCreated',
+    NETWORK_SCORE_CALCULATED = 'networkScoreCalculated'
 }
 
 export interface EventMap {
@@ -35,11 +37,15 @@ export interface EventMap {
         type: 'last_item_wubi' | 'last_item_wupi';
         epochId: number;
     };
-    [EventName.REWARDS_ASSIGNED]: {
+    [EventName.LAST_REWARD_CREATED]: {
         epochId: number;
-        success: boolean;
+        type: RewardPerEpochEntry['type'];
     };
-    // ...others events
+    [EventName.NETWORK_SCORE_CALCULATED]: {
+        epochId: number;
+        networkScore: number;
+        type: RewardPerEpochEntry['type'];
+    };
 }
 
 declare global {

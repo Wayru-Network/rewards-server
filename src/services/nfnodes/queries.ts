@@ -3,7 +3,7 @@ import { NfNode, NFNodeIdAndWayruDeviceId } from "@interfaces/nfnodes"
 
 /**
  * Get all active wubi nf nodes
- * The wubi nodes are the ones that are active and have a nfnode_type of 'don'
+ * The wubi nodes are the ones that are active and have not a nfnode_type of 'don'
  * @returns NfNode[]
  */
 export const getActiveWubiNfNodes = async () => {
@@ -13,7 +13,7 @@ export const getActiveWubiNfNodes = async () => {
         WHERE n.status = 'active'
         AND n.wayru_device_id IS NOT NULL
         AND n.asset_id IS NOT NULL
-        AND (n.nfnode_type = 'don' OR n.nfnode_type IS NULL)
+        AND (n.nfnode_type != 'don' OR n.nfnode_type IS NULL)
         ORDER BY n.id ASC
       `)
   return rows as NFNodeIdAndWayruDeviceId[]
@@ -21,7 +21,7 @@ export const getActiveWubiNfNodes = async () => {
 
 /**
  * Get all active wupi nf nodes
- * The wupi nodes are the ones that are active and have not a nfnode_type of 'don'
+ * The wupi nodes are the ones that are active and have a nfnode_type of 'don'
  * @returns NfNode[]
  */
 export const getActiveWupiNfNodes = async () => {
@@ -31,7 +31,7 @@ export const getActiveWupiNfNodes = async () => {
         WHERE n.status = 'active'
         AND n.wayru_device_id IS NOT NULL
         AND n.asset_id IS NOT NULL
-        AND (n.nfnode_type != 'don' OR n.nfnode_type IS NULL)
+        AND n.nfnode_type = 'don'
         ORDER BY n.id ASC
       `)
   return rows as NFNodeIdAndWayruDeviceId[]

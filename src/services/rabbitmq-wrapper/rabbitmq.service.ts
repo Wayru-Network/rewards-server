@@ -90,7 +90,6 @@ class RabbitWrapper {
         try {
             const queueConfig = this.queues.find(q => q.name === queue);
             if (!queueConfig) throw new Error(`Queue ${queue} not found`);
-            console.log('sending message to queue', message)
             await this.channel.sendToQueue(queue, Buffer.from(JSON.stringify(message)), {
                 persistent: true,
                 correlationId,
@@ -116,7 +115,11 @@ class RabbitWrapper {
                 // Then we configure the consumer
                 return channel.consume(
                     queueName,
-                    msg => msg && this.processMessage(processor, msg),
+                    async (msg) => {
+                        if (msg) {
+                            await this.processMessage(processor, msg);
+                        }
+                    },
                     {
                         noAck: false,
                     }

@@ -1,3 +1,4 @@
+import { RewardPerEpochEntry } from "@interfaces/rewards-per-epoch";
 
 
 export interface PoolPerEpoch {
@@ -11,3 +12,13 @@ export interface PoolPerEpoch {
 
 
 export type PoolPerEpochEntry = Omit<PoolPerEpoch, 'id'>
+
+export type UpdatePoolNetworkScoreResponse = {
+    epoch: PoolPerEpoch
+    rewards: {
+        id: number;
+        hotspot_score: number;
+        status: RewardPerEpochEntry['status'];
+        type: RewardPerEpochEntry['type'];
+    }[]
+}
