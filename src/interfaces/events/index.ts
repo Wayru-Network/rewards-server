@@ -12,8 +12,8 @@ export interface EventMap {
     };
     'rewardsProcessStarted': {
         startTime: number;
-        totalWubiNodes: number;
-        totalWupiNodes: number;
+        totalWubiNFNodes: number;
+        totalWupiNFNodes: number;
         epochId: number;
     };
     'wubiProcessCompleted': {
@@ -73,8 +73,8 @@ export interface EventMap {
     };
     [EventName.REWARDS_PROCESS_STARTED]: {
         startTime: number;
-        totalWubiNodes: number;
-        totalWupiNodes: number;
+        totalWubiNFNodes: number;
+        totalWupiNFNodes: number;
         epochId: number;
     };
 }

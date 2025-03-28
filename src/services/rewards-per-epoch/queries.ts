@@ -23,17 +23,7 @@ export const createRewardsPerEpoch = async (payload: RewardPerEpochEntry) => {
         if (!insertResult.rows[0]?.id) {
             throw new Error('Failed to insert into rewards_per_epoches');
         }
-
         const rewardId = insertResult.rows[0].id;
-
-        // verify that the record exists
-        const verifyResult = await client.query(`
-            SELECT id FROM rewards_per_epoches WHERE id = $1
-        `, [rewardId]);
-
-        if (!verifyResult.rows[0]) {
-            throw new Error(`Reward with ID ${rewardId} not found after insertion`);
-        }
 
         // 2. Insert in rewards_per_epoches_nfnode_links
         await client.query(`

@@ -1,5 +1,5 @@
 import pool from "@config/db"
-import { NfNode, NFNodeIdAndWayruDeviceId } from "@interfaces/nfnodes"
+import { NfNode, WubiNFNodes, WupiNFNodes } from "@interfaces/nfnodes"
 
 /**
  * Get all active wubi nf nodes
@@ -16,7 +16,7 @@ export const getActiveWubiNfNodes = async () => {
         AND (n.nfnode_type != 'don' OR n.nfnode_type IS NULL)
         ORDER BY n.id ASC
       `)
-  return rows as NFNodeIdAndWayruDeviceId[]
+  return rows as WubiNFNodes[]
 }
 
 /**
@@ -26,7 +26,7 @@ export const getActiveWubiNfNodes = async () => {
  */
 export const getActiveWupiNfNodes = async () => {
   const { rows } = await pool.query(`
-        SELECT n.id, n.wayru_device_id
+        SELECT n.id, n.mac
         FROM nfnodes AS n
         WHERE n.status = 'active'
         AND n.wayru_device_id IS NOT NULL
@@ -34,7 +34,7 @@ export const getActiveWupiNfNodes = async () => {
         AND n.nfnode_type = 'don'
         ORDER BY n.id ASC
       `)
-  return rows as NFNodeIdAndWayruDeviceId[]
+  return rows as WupiNFNodes[]
 }
 
 export const getNfNodeByWayruDeviceId = async (wayruDeviceId: string) => {

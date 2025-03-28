@@ -1,5 +1,5 @@
 import { initializeRabbitMQ } from '@services/rabbitmq-wrapper/rabbitmq.service';
-import { initializeRabbitConsumers } from '@services/rabbitmq-wrapper/rabbitmq-customer.service';
+import { initializeRabbitConsumers } from '@services/rabbitmq-wrapper/rabbitmq-consumers.service';
 import { startEventHub } from '@services/events/event-hub';
 import { initializeCronJobs } from '@crons/index';
 import { NetworkScoreCalculator } from '@services/pool-per-epoch/pool-network-score-calculator/network-score-calculator.service';

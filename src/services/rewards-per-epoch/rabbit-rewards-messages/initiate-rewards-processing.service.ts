@@ -2,7 +2,7 @@ import { ENV } from "@config/env/env";
 import { BATCH_SIZE, CONCURRENCY_LIMIT, TIME_DELAY } from "@constants";
 import { checkWupiSync } from "@helpers/rewards-per-epoch/rewards-per-epoch.helpers";
 import { logProgress, processInChunks, withRetry } from "@helpers/rewards-per-epoch/rewards-per-epoch.helpers";
-import { NFNodeIdAndWayruDeviceId } from "@interfaces/nfnodes";
+import { WubiNFNodes, WupiNFNodes } from "@interfaces/nfnodes";
 import { PoolPerEpoch } from "@interfaces/pool-per-epoch";
 import { getActiveWubiNfNodes, getActiveWupiNfNodes } from "@services/nfnodes/queries";
 import { createCurrentPoolPerEpoch, getPoolPerEpochById, getPoolPerEpochNumber, updatePoolPerEpochById } from "@services/pool-per-epoch/queries";
@@ -19,6 +19,7 @@ export const initiateRewardsProcessing = async (poolId?: number):
         // await 10 seconds to start the process,
         //TODO: remove this after testing
         await new Promise(resolve => setTimeout(resolve, 10000));
+
         // get the start time of the process
         const startTime = Date.now()
 
@@ -35,8 +36,8 @@ export const initiateRewardsProcessing = async (poolId?: number):
         // emit the event that the rewards process has started
         eventHub.emit(EventName.REWARDS_PROCESS_STARTED, {
             startTime,
-            totalWubiNodes: wubiNFNodes.length,
-            totalWupiNodes: wupiNFNodes.length,
+            totalWubiNFNodes: wubiNFNodes.length,
+            totalWupiNFNodes: wupiNFNodes.length,
             epochId: epoch.id
         })
 
@@ -71,7 +72,7 @@ export const initiateRewardsProcessing = async (poolId?: number):
 
         // now process the nfnodes and calculate their scores
         await processWUBIWithConcurrency(wubiNFNodes, epoch)
-        //processWUPIWithConcurrency(wupiNFNodes, epoch) // TODO: uncomment this when wupi rewards are ready
+        await processWUPIWithConcurrency(wupiNFNodes, epoch)
         return { error: false, epoch: epoch }
     } catch (error) {
         console.error('error processing rewards per epoch', error)
@@ -80,7 +81,7 @@ export const initiateRewardsProcessing = async (poolId?: number):
 }
 
 // process wubi nfnodes with concurrency
-const processWUBIWithConcurrency = async (nfNodes: NFNodeIdAndWayruDeviceId[], poolPerEpoch: PoolPerEpoch) => {
+const processWUBIWithConcurrency = async (nfNodes: WubiNFNodes[], poolPerEpoch: PoolPerEpoch) => {
     try {
         console.log(`Processing ${nfNodes.length} WUBI nfnodes with concurrency`);
         const chunks = processInChunks(nfNodes, BATCH_SIZE);
@@ -142,7 +143,7 @@ const processWUBIWithConcurrency = async (nfNodes: NFNodeIdAndWayruDeviceId[], p
 };
 
 // process wupi nfnodes with concurrency
-const processWUPIWithConcurrency = async (nfNodes: NFNodeIdAndWayruDeviceId[], epoch: PoolPerEpoch) => {
+const processWUPIWithConcurrency = async (nfNodes: WupiNFNodes[], epoch: PoolPerEpoch) => {
     try {
         console.log('Processing WUPI nfnodes with concurrency');
         const epochDate = moment(epoch.epoch).format('YYYY-MM-DD');
@@ -170,12 +171,12 @@ const processWUPIWithConcurrency = async (nfNodes: NFNodeIdAndWayruDeviceId[], e
 
                                 const sentResult = await rabbitWrapper.sendMessage(
                                     {
-                                        wayru_device_id: nfNode.wayru_device_id,
-                                        timestamp: moment(epoch.epoch).unix(),
-                                        epoch_id: epoch.id,
-                                        last_item: isLastItem
+                                        nas_id: nfNode.mac,
+                                        nfnode_id: nfNode.id,
+                                        total_valid_nas: nfNodes?.length,
+                                        epoch: epoch.epoch
                                     }, 
-                                   'Add queue here' //ENV.RABBIT_QUEUES.WIFI_API_QUEUE
+                                   ENV.RABBIT_QUEUES.WUPI_API_QUEUE
                                 );
 
                                 if (!sentResult) {

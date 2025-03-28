@@ -5,20 +5,28 @@ import { v4 as uuidv4 } from 'uuid';
 import { MessageProcessor, RabbitConfig } from '@interfaces/rabbitmq-wrapper';
 import { QueueConfig } from '@interfaces/rabbitmq-wrapper';
 import { ENV } from '@config/env/env';
+import { WUPIMessage, WUBIMessage } from '@interfaces/rewards-per-epoch';
 
 class RabbitWrapper {
     private channel!: ChannelWrapper;
     private connection!: AmqpConnectionManager;
-    private responseQueue!: string;
-    private readonly queues: QueueConfig[];
+    private responseQueues!: {
+        wubi: string;
+        wupi: string;
+    };
+    private readonly queues: QueueConfig[] = [
+        { name: ENV.RABBIT_QUEUES.WUBI_API_QUEUE, durable: true, asserted: false },
+        { name: ENV.RABBIT_QUEUES.WUBI_API_QUEUE_RESPONSE, durable: true, asserted: false },
+        { name: ENV.RABBIT_QUEUES.WUPI_API_QUEUE, durable: true, asserted: false },
+        { name: ENV.RABBIT_QUEUES.WUPI_API_QUEUE_RESPONSE, durable: true, asserted: false }
+    ];
     private static instance: RabbitWrapper;
 
     private constructor() {
-        this.queues = Object.values(ENV.RABBIT_QUEUES).map(name => ({
-            name,
-            durable: true,
-            asserted: false
-        }));
+        this.responseQueues = {
+            wubi: ENV.RABBIT_QUEUES.WUBI_API_QUEUE_RESPONSE,
+            wupi: ENV.RABBIT_QUEUES.WUPI_API_QUEUE_RESPONSE
+        };
     }
 
     public static getInstance(): RabbitWrapper {
@@ -47,23 +55,20 @@ class RabbitWrapper {
 
     public async connect(config: RabbitConfig): Promise<void> {
         try {
-            const { user, pass, host, responseQueue } = config;
+            const { user, pass, host, responseQueues } = config;
             const connectionUrl = `amqp://${user}:${pass}@${host}`;
 
             this.connection = amqp.connect([connectionUrl]);
+            this.responseQueues = responseQueues;
             this.channel = this.connection.createChannel({
                 json: false,
                 setup: async (channel: Channel) => {
                     // Assert all queues
-                    await Promise.all([
-                        ...this.queues.map(queue =>
-                            channel.assertQueue(queue.name, { durable: queue.durable })
-                        ),
-                        channel.assertQueue(responseQueue, { durable: true })
-                    ]);
+                    await Promise.all(
+                        this.queues.map(queue => this.assertQueue(queue))
+                    );
                 }
             });
-            this.responseQueue = responseQueue;
 
             // Setup error handlers
             this.connection.on('connect', () => {
@@ -82,18 +87,19 @@ class RabbitWrapper {
         }
     }
 
-    public async sendMessage<T>(
+    public async sendMessage<T extends WUPIMessage | WUBIMessage>(
         message: T,
-        queue: string,
+        queue: keyof typeof this.responseQueues,
         correlationId: string = uuidv4()
     ): Promise<boolean> {
         try {
             const queueConfig = this.queues.find(q => q.name === queue);
             if (!queueConfig) throw new Error(`Queue ${queue} not found`);
+            await this.assertQueue(queueConfig);
             await this.channel.sendToQueue(queue, Buffer.from(JSON.stringify(message)), {
                 persistent: true,
                 correlationId,
-                replyTo: this.responseQueue,
+                replyTo: this.responseQueues[queue],
             });
 
             return true;
@@ -149,7 +155,10 @@ export const initializeRabbitMQ = async () => {
             user: ENV.RABBIT_USER,
             pass: ENV.RABBIT_PASS,
             host: ENV.RABBIT_HOST,
-            responseQueue: ENV.RABBIT_QUEUES.WUBI_API_QUEUE_RESPONSE
+            responseQueues: {
+                wubi: ENV.RABBIT_QUEUES.WUBI_API_QUEUE_RESPONSE,
+                wupi: ENV.RABBIT_QUEUES.WUPI_API_QUEUE_RESPONSE
+            }
         });
         console.log('🐇 RabbitMQ initialized');
     } catch (error) {

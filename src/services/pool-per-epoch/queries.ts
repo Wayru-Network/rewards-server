@@ -1,9 +1,9 @@
 import { ENV } from "@config/env/env";
 import pool from "../../config/db";
 import { PoolPerEpoch, PoolPerEpochEntry, UpdatePoolNetworkScoreResponse } from "../../interfaces/pool-per-epoch";
-import moment from "moment";
 import { RewardPerEpochEntry } from "@interfaces/rewards-per-epoch";
 import { getPoolPerEpochAmounts } from "./pool-per-epoch.service";
+import moment from "moment";
 
 export const getPoolPerEpochById = async (epochId: number): Promise<PoolPerEpoch | null> => {
     try {

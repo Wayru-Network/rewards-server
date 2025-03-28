@@ -11,7 +11,10 @@ export interface RabbitConfig {
     user: string;
     pass: string;
     host: string;
-    responseQueue: string;
+    responseQueues: {
+        wubi: string;
+        wupi: string;
+    };
 }
 
 export interface WubiMessage {

@@ -1,12 +1,13 @@
 import { eventHub } from "@services/events/event-hub";
 import { EventName } from "@interfaces/events";
 import { updatePoolPerEpochById } from "@services/pool-per-epoch/queries";
+import { RewardSystemManager } from "@services/solana/reward-system/reward-system.manager";
 
 export class TimerService {
     private processStartTime: number | null = null;
     private processData: {
-        totalWubiNodes: number;
-        totalWupiNodes: number;
+        totalWubiNFNodes: number;
+        totalWupiNFNodes: number;
         epochId: number;
     } | null = null;
     private wubiCompleted = false;
@@ -35,13 +36,13 @@ export class TimerService {
             const processingTime = Date.now() - this.processStartTime;
             console.log('🔔 WUBI process completed', {
                 epochId: this.processData.epochId,
-                totalNodes: this.processData.totalWubiNodes,
+                totalNFNodes: this.processData.totalWubiNFNodes,
                 processingTimeMs: processingTime,
                 processingTimeFormatted: this.formatTime(processingTime),
                 startTime: new Date(this.processStartTime).toISOString(),
                 endTime: new Date().toISOString(),
-                averageTimePerNode: this.processData.totalWubiNodes > 0 
-                    ? `${(processingTime / this.processData.totalWubiNodes).toFixed(2)}ms per node`
+                averageTimePerNode: this.processData.totalWubiNFNodes > 0 
+                    ? `${(processingTime / this.processData.totalWubiNFNodes).toFixed(2)}ms per node`
                     : 'N/A'
             });
 
@@ -55,17 +56,19 @@ export class TimerService {
             const processingTime = Date.now() - this.processStartTime;
             console.log('🔔 WUPI process completed', {
                 epochId: this.processData.epochId,
-                totalNodes: this.processData.totalWupiNodes,
+                totalNFNodes: this.processData.totalWupiNFNodes,
                 processingTimeMs: processingTime,
                 processingTimeFormatted: this.formatTime(processingTime),
                 startTime: new Date(this.processStartTime).toISOString(),
                 endTime: new Date().toISOString(),
-                averageTimePerNode: this.processData.totalWupiNodes > 0 
-                    ? `${(processingTime / this.processData.totalWupiNodes).toFixed(2)}ms per node`
+                averageTimePerNode: this.processData.totalWupiNFNodes > 0 
+                    ? `${(processingTime / this.processData.totalWupiNFNodes).toFixed(2)}ms per node`
                     : 'N/A'
             });
 
             this.checkCompletion();
+            // clean up reward system manager
+            RewardSystemManager.cleanup()
         });
     }
 
@@ -74,8 +77,8 @@ export class TimerService {
             const totalTime = Date.now() - this.processStartTime;
             const result = {
                 epochId: this.processData.epochId,
-                totalWubiNodes: this.processData.totalWubiNodes,
-                totalWupiNodes: this.processData.totalWupiNodes,
+                totalWubiNFNodes: this.processData.totalWubiNFNodes,
+                totalWupiNFNodes: this.processData.totalWupiNFNodes,
                 processingTimeMs: totalTime,
                 processingTimeFormatted: this.formatTime(totalTime),
                 startTime: new Date(this.processStartTime).toISOString(),
