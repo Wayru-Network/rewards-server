@@ -38,4 +38,4 @@ bootstrap().catch(err => {
   process.exit(1);
 });
 
-// initiateRewardsProcessing() // this is only for testing purposes
+initiateRewardsProcessing(206) // this is only for testing purposes

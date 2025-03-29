@@ -7,7 +7,7 @@ import moment from "moment";
 
 export const getPoolPerEpochById = async (epochId: number): Promise<PoolPerEpoch | null> => {
     try {
-        const result = await pool.query('SELECT * FROM pool_per_epoch WHERE epoch_id = $1', [epochId]);
+        const result = await pool.query('SELECT * FROM pool_per_epoch WHERE id = $1', [epochId]);
         const document = result?.rows?.length > 0 ? result.rows[0] : null;
         return document;
     } catch (error) {
@@ -143,4 +143,10 @@ export const updatePoolNetworkScore = async (epochId: number, networkScore: numb
         epoch,
         rewards
     };
+}
+
+export const getPoolPerEpochByEpoch = async (epoch: Date) => {
+    const {rows} = await pool.query('SELECT * FROM pool_per_epoch WHERE epoch = $1', [epoch])
+    const document = rows?.length > 0 ? rows[0] : null
+    return document as PoolPerEpoch | null
 }

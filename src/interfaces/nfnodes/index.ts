@@ -67,3 +67,9 @@ export type NFNodeEntry = {
     depositTimestamp: BN;
     nfnodeType: Record<NFNodeType, {}>;
 };
+
+export type NFNodeRewardType = 'wubi' | 'wupi';
+export interface NFNodeEligibilityConfig {
+    requiredDepositAmount: number;
+    type: NFNodeRewardType;
+}

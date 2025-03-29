@@ -9,10 +9,10 @@ export const initializeRabbitConsumers = async () => {
     try {
         await rabbitWrapper.consumeResponse(async (msg: ConsumeMessage) => {
             processWubiRabbitResponse(msg);
-        }, ENV.RABBIT_QUEUES.WUBI_API_QUEUE_RESPONSE);
+        }, ENV.RABBIT_QUEUES.WUBI_API_QUEUE);
         await rabbitWrapper.consumeResponse(async (msg: ConsumeMessage) => {
             processWupiRabbitResponse(msg);
-        }, ENV.RABBIT_QUEUES.WUPI_API_QUEUE_RESPONSE);
+        }, ENV.RABBIT_QUEUES.WUPI_API_QUEUE);
         // TODO: add other consumers here ⬇️
         console.log('🐇 RabbitMQ consumers initialized');
     } catch (error) {

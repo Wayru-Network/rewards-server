@@ -32,7 +32,7 @@ export class TimerService {
         eventHub.on(EventName.WUBI_PROCESS_COMPLETED, () => {
             if (!this.processStartTime || !this.processData) return;
             this.wubiCompleted = true;
-            
+
             const processingTime = Date.now() - this.processStartTime;
             console.log('🔔 WUBI process completed', {
                 epochId: this.processData.epochId,
@@ -41,7 +41,7 @@ export class TimerService {
                 processingTimeFormatted: this.formatTime(processingTime),
                 startTime: new Date(this.processStartTime).toISOString(),
                 endTime: new Date().toISOString(),
-                averageTimePerNode: this.processData.totalWubiNFNodes > 0 
+                averageTimePerNode: this.processData.totalWubiNFNodes > 0
                     ? `${(processingTime / this.processData.totalWubiNFNodes).toFixed(2)}ms per node`
                     : 'N/A'
             });
@@ -52,7 +52,7 @@ export class TimerService {
         eventHub.on(EventName.WUPI_PROCESS_COMPLETED, () => {
             if (!this.processStartTime || !this.processData) return;
             this.wupiCompleted = true;
-            
+
             const processingTime = Date.now() - this.processStartTime;
             console.log('🔔 WUPI process completed', {
                 epochId: this.processData.epochId,
@@ -61,14 +61,12 @@ export class TimerService {
                 processingTimeFormatted: this.formatTime(processingTime),
                 startTime: new Date(this.processStartTime).toISOString(),
                 endTime: new Date().toISOString(),
-                averageTimePerNode: this.processData.totalWupiNFNodes > 0 
+                averageTimePerNode: this.processData.totalWupiNFNodes > 0
                     ? `${(processingTime / this.processData.totalWupiNFNodes).toFixed(2)}ms per node`
                     : 'N/A'
             });
 
             this.checkCompletion();
-            // clean up reward system manager
-            RewardSystemManager.cleanup()
         });
     }
 
@@ -89,7 +87,8 @@ export class TimerService {
                 processing_metrics: result,
                 status: 'ready-for-claim'
             });
-
+            // clean up reward system manager
+            RewardSystemManager.cleanup()
             this.resetProcess();
         }
     }
@@ -98,7 +97,7 @@ export class TimerService {
         const seconds = Math.floor(ms / 1000);
         const minutes = Math.floor(seconds / 60);
         const hours = Math.floor(minutes / 60);
-        
+
         return `${hours}h ${minutes % 60}m ${seconds % 60}s`;
     }
 

@@ -1,5 +1,6 @@
 import { ENV } from "@config/env/env"
-import { getPoolPerEpochNumber, getTestnetAmount } from "./queries"
+import { getPoolPerEpochNumber, getTestnetAmount, getPoolPerEpochByEpoch as getPoolPerEpochByEpochQuery} from "./queries"
+import moment from "moment"
 
 export const getPoolPerEpochAmounts = async (epoch: Date) => {
     try {
@@ -120,4 +121,14 @@ export const getPoolPerEpochAmount = (epochNumber: number) => {
 
     const reductionPercentage = 0.999733349023419
     return BigInt((1200000000000 * Math.pow(Number(reductionPercentage), epochNumber - 1)).toFixed(0))
+}
+
+export const getPoolPerEpochByEpoch = async (epoch: Date) => {
+  // Validate dateStr format
+  if (!moment(epoch, 'YYYY-MM-DD', true).isValid()) {
+    console.log('Invalid date format; not "YYYY-MM-DD"')
+    return null
+  }
+  const epochDocument = await getPoolPerEpochByEpochQuery(epoch)
+  return epochDocument
 }

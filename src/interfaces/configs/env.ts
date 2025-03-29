@@ -1,4 +1,3 @@
-import { RabbitConfig } from "@interfaces/rabbitmq-wrapper";
 
 
 export type ENV_CONFIG = {
@@ -19,9 +18,9 @@ export type ENV_CONFIG = {
   RABBIT_PASS: string,
   RABBIT_HOST: string,
   RABBIT_QUEUES: {
-    WUBI_API_QUEUE: keyof RabbitConfig['responseQueues'],
+    WUBI_API_QUEUE: string,
     WUBI_API_QUEUE_RESPONSE: string,
-    WUPI_API_QUEUE: keyof RabbitConfig['responseQueues'],
+    WUPI_API_QUEUE: string,
     WUPI_API_QUEUE_RESPONSE: string,
   },
   SOLANA_API_KEY: string,

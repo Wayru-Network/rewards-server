@@ -4,6 +4,7 @@ import { RewardSystem } from "@interfaces/reward-system/reward-system";
 import { getKey } from "@services/keys/queries";
 import { RawAccount, AccountLayout } from "@solana/spl-token";
 import { PublicKey } from "@solana/web3.js";
+import { RewardSystemManager } from "./reward-system.manager";
 
 export const getRewardSystemProgramId = async () => {
     const key = await getKey('REWARD_SYSTEM_PROGRAM_ID')

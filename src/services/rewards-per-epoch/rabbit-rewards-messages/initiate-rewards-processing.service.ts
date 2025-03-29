@@ -1,4 +1,3 @@
-import { ENV } from "@config/env/env";
 import { BATCH_SIZE, CONCURRENCY_LIMIT, TIME_DELAY } from "@constants";
 import { checkWupiSync } from "@helpers/rewards-per-epoch/rewards-per-epoch.helpers";
 import { logProgress, processInChunks, withRetry } from "@helpers/rewards-per-epoch/rewards-per-epoch.helpers";
@@ -11,14 +10,16 @@ import { rabbitWrapper } from '@services/rabbitmq-wrapper/rabbitmq.service';
 import moment from 'moment'
 import { eventHub } from "@services/events/event-hub";
 import { EventName } from "@interfaces/events";
+import { messageBatchTracker } from "@services/rabbitmq-wrapper/messages-batch-tracker.service";
+import { ENV } from "@config/env/env";
 
 // function to initiate the rewards processing
 export const initiateRewardsProcessing = async (poolId?: number):
     Promise<{ error: boolean, message?: string, epoch?: PoolPerEpoch }> => {
     try {
-        // await 10 seconds to start the process,
+        // await 5 seconds to start the process,
         //TODO: remove this after testing
-        await new Promise(resolve => setTimeout(resolve, 10000));
+        await new Promise(resolve => setTimeout(resolve, 5000));
 
         // get the start time of the process
         const startTime = Date.now()
@@ -71,8 +72,8 @@ export const initiateRewardsProcessing = async (poolId?: number):
         }
 
         // now process the nfnodes and calculate their scores
-        await processWUBIWithConcurrency(wubiNFNodes, epoch)
-        await processWUPIWithConcurrency(wupiNFNodes, epoch)
+         await processWUBIWithConcurrency(wubiNFNodes, epoch)
+        // await processWUPIWithConcurrency(wupiNFNodes, epoch)
         return { error: false, epoch: epoch }
     } catch (error) {
         console.error('error processing rewards per epoch', error)
@@ -85,6 +86,9 @@ const processWUBIWithConcurrency = async (nfNodes: WubiNFNodes[], poolPerEpoch: 
     try {
         console.log(`Processing ${nfNodes.length} WUBI nfnodes with concurrency`);
         const chunks = processInChunks(nfNodes, BATCH_SIZE);
+
+        // register batch
+        messageBatchTracker.registerBatch(poolPerEpoch.id.toString(), nfNodes.length)
 
         for (const [chunkIndex, chunk] of chunks.entries()) {
             const semaphore = Array(CONCURRENCY_LIMIT).fill(Promise.resolve());
@@ -135,7 +139,7 @@ const processWUBIWithConcurrency = async (nfNodes: WubiNFNodes[], poolPerEpoch: 
             }
         }
 
-        console.log('✅ Finished processing all WUBI nfnodes');
+        console.log('✅ Finished to send all WUBI nfnodes');
     } catch (error) {
         console.error('🚨 Error in WUBI batch processing:', error);
         throw error;
@@ -148,6 +152,9 @@ const processWUPIWithConcurrency = async (nfNodes: WupiNFNodes[], epoch: PoolPer
         console.log('Processing WUPI nfnodes with concurrency');
         const epochDate = moment(epoch.epoch).format('YYYY-MM-DD');
         console.log('Epoch date:', epochDate);
+
+        // register batch
+        messageBatchTracker.registerBatch(epochDate, nfNodes.length)
 
         const synced = await checkWupiSync(epochDate);
         if (!synced) {
@@ -168,22 +175,21 @@ const processWUPIWithConcurrency = async (nfNodes: WupiNFNodes[], epoch: PoolPer
                             try {
                                 await new Promise((resolve) => setTimeout(resolve, TIME_DELAY));
                                 const isLastItem = index === nfNodes.length - 1;
+                                const epochDate = moment(epoch.epoch).format('YYYY-MM-DD')
 
                                 const sentResult = await rabbitWrapper.sendMessage(
                                     {
                                         nas_id: nfNode.mac,
                                         nfnode_id: nfNode.id,
                                         total_valid_nas: nfNodes?.length,
-                                        epoch: epoch.epoch
+                                        epoch: epochDate as unknown as Date
                                     }, 
-                                   ENV.RABBIT_QUEUES.WUPI_API_QUEUE
+                                    ENV.RABBIT_QUEUES.WUPI_API_QUEUE
                                 );
 
                                 if (!sentResult) {
                                     throw new Error(`Failed to send message for NFNode ${nfNode.id}`);
                                 }
-
-                                console.log(`🚀 WUPI message sent for node ${nfNode.id}`);
 
                                 if (isLastItem) {
                                     console.log('🌠 Last WUPI item processed successfully');
@@ -203,7 +209,7 @@ const processWUPIWithConcurrency = async (nfNodes: WupiNFNodes[], epoch: PoolPer
             logProgress(Math.min(processedCount, nfNodes.length), nfNodes.length, 'WUPI');
         }
 
-        console.log('✅ Finished processing all WUPI nfnodes');
+        console.log('✅ Finished to send all WUPI nfnodes');
     } catch (error) {
         console.error('🚨 Error processing WUPI nfnodes:', error);
         throw error;

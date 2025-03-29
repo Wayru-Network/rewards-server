@@ -13,9 +13,9 @@ export const getActiveWubiNfNodes = async () => {
         WHERE n.status = 'active'
         AND n.wayru_device_id IS NOT NULL
         AND n.asset_id IS NOT NULL
-        AND (n.nfnode_type != 'don' OR n.nfnode_type IS NULL)
         ORDER BY n.id ASC
       `)
+  //TODO: change asset_id to solana_asset_id
   return rows as WubiNFNodes[]
 }
 
@@ -29,11 +29,11 @@ export const getActiveWupiNfNodes = async () => {
         SELECT n.id, n.mac
         FROM nfnodes AS n
         WHERE n.status = 'active'
-        AND n.wayru_device_id IS NOT NULL
+        AND n.mac IS NOT NULL
         AND n.asset_id IS NOT NULL
-        AND n.nfnode_type = 'don'
         ORDER BY n.id ASC
       `)
+  //TODO: change asset_id to solana_asset_id
   return rows as WupiNFNodes[]
 }
 
@@ -45,13 +45,9 @@ export const getNfNodeByWayruDeviceId = async (wayruDeviceId: string) => {
   return document as NfNode
 }
 
-export const getNfNodeMultiplier = (nfnode: NfNode) => multipliers[nfnode?.model || ''] || 1
-
-
-const multipliers: { [key: string]: number } = {
-  BYOD: 1,
-  Apocalypse: 1.25,
-  Eclypse: 1.5,
-  Prometheus: 2,
-  Genesis: 3,
+export const getNFNodeById = async (id: number) => {
+  const { rows } = await pool.query(`
+        SELECT * FROM nfnodes WHERE id = $1
+      `, [id])
+  return rows[0] as NfNode
 }

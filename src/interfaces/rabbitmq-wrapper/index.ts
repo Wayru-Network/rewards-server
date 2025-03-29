@@ -5,16 +5,13 @@ export interface QueueConfig {
     name: string;
     durable: boolean;
     asserted: boolean;
+    replyTo: string;
 }
 
 export interface RabbitConfig {
     user: string;
     pass: string;
     host: string;
-    responseQueues: {
-        wubi: string;
-        wupi: string;
-    };
 }
 
 export interface WubiMessage {
