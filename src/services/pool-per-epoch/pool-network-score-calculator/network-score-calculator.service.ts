@@ -3,9 +3,10 @@ import { EventMap } from "@interfaces/events";
 import { EventName } from "@interfaces/events";
 import { eventHub } from "@services/events/event-hub";
 import { updatePoolNetworkScore } from "../queries";
-import { processRewardsBatch } from "@services/rewards-per-epoch/rewards-per-epoch.service";
+import { processRewardsBatch } from "@services/rewards-per-epoch/queries";
 import { BATCH_SIZE_REWARDS } from "@constants";
 import { getPoolPerEpochAmounts } from "../pool-per-epoch.service";
+import { sumAllNetworkScoresQuery } from "@services/rewards-per-epoch/helpers";
 
 export class NetworkScoreCalculator {
     private static instance: NetworkScoreCalculator;
@@ -62,15 +63,7 @@ export class NetworkScoreCalculator {
     private async handleLastRewardCreated({ epochId, type }: EventMap[EventName.LAST_REWARD_CREATED]) {
         try {
             // Calculate network score total
-            const { rows } = await pool.query(`
-                SELECT 
-                    SUM(rpe.hotspot_score) as network_score
-                FROM rewards_per_epoches rpe
-                INNER JOIN rewards_per_epoches_pool_per_epoch_links rel 
-                    ON rel.rewards_per_epoch_id = rpe.id
-                WHERE rel.pool_per_epoch_id = $1
-                    AND rpe.type = $2
-            `, [epochId, type]) as { 
+            const { rows } = await pool.query(sumAllNetworkScoresQuery(type, epochId)) as { 
                 rows: {
                     network_score: number;
                 }[] 
@@ -114,14 +107,6 @@ export class NetworkScoreCalculator {
                 const start = batchIndex * BATCH_SIZE_REWARDS;
                 const end = Math.min(start + BATCH_SIZE_REWARDS, rewards.length);
                 const batch = rewards.slice(start, end);
-                
-                console.log(`Processing batch ${batchIndex + 1}/${totalBatches}:`, {
-                    batchSize: batch.length,
-                    startIndex: start,
-                    endIndex: end,
-                    processedSoFar: processedCount,
-                    remaining: rewards.length - processedCount
-                });
 
                 // process rewards batch
                 await processRewardsBatch({
@@ -132,13 +117,6 @@ export class NetworkScoreCalculator {
 
                 processedCount += batch.length;
             }
-
-            // At the end, verify that we processed everything
-            console.log('Batch processing completed:', {
-                totalRewards: rewards.length,
-                processed: processedCount,
-                verified: processedCount === rewards.length
-            });
 
             if (processedCount !== rewards.length) {
                 console.error('⚠️ Mismatch in processed rewards:', {

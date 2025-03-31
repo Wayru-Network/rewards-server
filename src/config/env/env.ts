@@ -27,4 +27,5 @@ export const ENV: ENV_CONFIG = {
   SOLANA_API_KEY: process.env.SOLANA_API_KEY || '',
   SOLANA_API_URL: process.env.SOLANA_API_URL || 'https://api.devnet.solana.com',
   SOLANA_PRIVATE_KEY: process.env.SOLANA_PRIVATE_KEY || '',
+  REWARDS_MODE: process.env.REWARDS_MODE as 'production' | 'test' || 'test',
 };

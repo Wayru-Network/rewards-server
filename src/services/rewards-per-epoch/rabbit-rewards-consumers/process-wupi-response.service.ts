@@ -9,38 +9,61 @@ import { eventHub } from "@services/events/event-hub";
 import { EventName } from "@interfaces/events";
 import moment from "moment";
 
+let lastMessageTime = Date.now();
+const SLOW_THRESHOLD = 15000; // 15 seconds
+
 export const processWupiRabbitResponse = async (msg: ConsumeMessage) => {
+    const currentTime = Date.now();
+    const timeSinceLastMessage = currentTime - lastMessageTime;
+    lastMessageTime = currentTime;
+    
+    const startTime = Date.now();
+    const timeMarks: { [key: string]: number } = {};
+
     try {
-        const { nas_id, nfnode_id, epoch, total_valid_nas, score } = JSON.parse(msg.content.toString()) as WUPIMessageResponse
+        const beforeParsing = Date.now();
+        const { nas_id, nfnode_id, epoch, total_valid_nas, score } = JSON.parse(msg.content.toString()) as WUPIMessageResponse;
+        timeMarks.parsing = Date.now() - beforeParsing;
 
-        if (        
-            !nas_id ||
-            !nfnode_id ||
-            !epoch ||
-            typeof total_valid_nas !== 'number'
-        ) {
-            console.error('invalid WUPI message')
-            return
+        if (!nas_id || !nfnode_id || !epoch || typeof total_valid_nas !== 'number') {
+            console.error('invalid WUPI message');
+            return;
         }
-        // get instance of reward system program
-        const rewardSystemProgram = await RewardSystemManager.getInstance()
 
-        const validateEntry = false // TODO: remove this, it's for testing purposes
-        // get eligible nfnode
-        const {isEligible, nfnode} = await getEligibleWupiNFNodes(nfnode_id, rewardSystemProgram, validateEntry)
-        // the reward multiplier is 0 if the nfnode is not eligible
-        const multiplier = isEligible ? getNfNodeMultiplier(nfnode) : 0
-        // get epoch by date
-        const epochDocument = await getPoolPerEpochByEpoch(epoch)
+        // Get instance of reward system program
+        const beforeRewardSystem = Date.now();
+        const rewardSystemProgram = await RewardSystemManager.getInstance();
+        timeMarks.rewardSystemInit = Date.now() - beforeRewardSystem;
+
+        // Get eligible nfnode
+        const beforeEligibility = Date.now();
+        const {isEligible, nfnode} = await getEligibleWupiNFNodes(nfnode_id, rewardSystemProgram, false);
+        timeMarks.eligibilityCheck = Date.now() - beforeEligibility;
+
+        // Calculate multiplier
+        const beforeMultiplier = Date.now();
+        const multiplier = isEligible ? getNfNodeMultiplier(nfnode) : 0;
+        timeMarks.multiplierCalc = Date.now() - beforeMultiplier;
+
+        // Get epoch document
+        const beforeEpochDoc = Date.now();
+        const epochDocument = await getPoolPerEpochByEpoch(epoch);
+        timeMarks.epochDocRetrieval = Date.now() - beforeEpochDoc;
+
         if (!epochDocument) {
-            console.error('epoch not found')
-            return
+            console.error('epoch not found');
+            return;
         }
-        // score in gb
+
+        // Calculate score
+        const beforeScoreCalc = Date.now();
         const scoreInGb = Number(BigInt(score)) / 1000000000;
-        // create rewards per epoch
+        timeMarks.scoreCalculation = Date.now() - beforeScoreCalc;
+
+        // Create rewards
+        const beforeRewards = Date.now();
         const rewards = await createRewardsPerEpoch({
-            hotspot_score: Number((scoreInGb > 0 ? scoreInGb * multiplier : 0 ).toFixed(6)),
+            hotspot_score: Number((scoreInGb > 0 ? scoreInGb * multiplier : 0).toFixed(6)),
             nfnode: nfnode_id,
             pool_per_epoch: epochDocument.id,
             status: 'calculating',
@@ -49,26 +72,44 @@ export const processWupiRabbitResponse = async (msg: ConsumeMessage) => {
             currency: 'WAYRU',
             owner_payment_status: 'pending',
             host_payment_status: 'pending',
-        })
+        });
+        timeMarks.rewardsCreation = Date.now() - beforeRewards;
+
         if (!rewards) {
-            console.error('error creating rewards per epoch')
-            return
+            console.error('error creating rewards per epoch');
+            return;
         }
 
-        // track message
+        // Track message
+        const beforeTracking = Date.now();
         const { isLastMessage } = messageBatchTracker.trackMessage(moment(epoch).format('YYYY-MM-DD'));
+        timeMarks.messageTracking = Date.now() - beforeTracking;
+
         if (isLastMessage) {
-            // emit a event hub, when it is received, 
-            // it will initiate to calculate amount of rewards
             eventHub.emit(EventName.LAST_REWARD_CREATED, {
                 epochId: epochDocument.id,
                 type: 'wUPI'
-            })
-            // this event will trigger the network score calculator to calculate the rewards:
-            //go to: () => src/services/events/timer-service/timer.service.ts
+            });
+        }
+
+        timeMarks.total = Date.now() - startTime;
+        
+        if (timeMarks.total > SLOW_THRESHOLD) {
+            console.warn('⚠️ Slow WUPI message processing:', {
+                messageId: msg.properties.correlationId,
+                nas_id,
+                nfnode_id,
+                times: timeMarks,
+                isEligible,
+                messageTimings: {
+                    receivedAt: new Date(currentTime).toISOString(),
+                    timeSinceLastMessage: `${timeSinceLastMessage}ms`,
+                    processingTime: `${timeMarks.total}ms`
+                }
+            });
         }
     } catch (error) {
         console.error('🚨 Error processing WUPI rabbit response:', error);
-        return
+        return;
     }
-}
+};

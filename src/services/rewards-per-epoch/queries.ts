@@ -1,6 +1,8 @@
 import pool from "@config/db"
-import { RewardPerEpochEntry } from "@interfaces/rewards-per-epoch"
-
+import { RewardPerEpochEntry, RewardPerEpoch } from "@interfaces/rewards-per-epoch"
+import { insertRewardsPerEpochNFNodeLinksQuery, insertRewardsPerEpochPoolPerEpochLinksQuery, returnRewardsPerEpochQuery, rewardsPerEpochTable } from "./helpers";
+import { roundDownTo6Decimals } from "@utils/numbers.utils";
+import { UpdatePoolNetworkScoreResponse } from "@interfaces/pool-per-epoch";
 
 export const createRewardsPerEpoch = async (payload: RewardPerEpochEntry) => {
     const client = await pool.connect();
@@ -14,48 +16,29 @@ export const createRewardsPerEpoch = async (payload: RewardPerEpochEntry) => {
         await client.query('BEGIN');
 
         const insertResult = await client.query(`
-            INSERT INTO rewards_per_epoches 
-            (type, hotspot_score, amount, owner_payment_status, host_payment_status, status, currency)
-            VALUES ($1, $2, $3, $4, $5, $6, $7)
+            INSERT INTO ${rewardsPerEpochTable} 
+            (type, hotspot_score, amount, owner_payment_status, host_payment_status, status, currency, published_at)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
             RETURNING id
-        `, [type, hotspot_score, amount ?? 0, owner_payment_status, host_payment_status, status, currency]);
+        `, [type, hotspot_score, amount ?? 0, owner_payment_status, host_payment_status, status, currency, new Date()]);
 
         if (!insertResult.rows[0]?.id) {
-            throw new Error('Failed to insert into rewards_per_epoches');
+            throw new Error(`Failed to insert into ${rewardsPerEpochTable}`);
         }
-        const rewardId = insertResult.rows[0].id;
+        const rewardId = insertResult.rows[0].id as number
 
         // 2. Insert in rewards_per_epoches_nfnode_links
-        await client.query(`
-            INSERT INTO rewards_per_epoches_nfnode_links 
-            (rewards_per_epoch_id, nfnode_id)
-            VALUES ($1, $2)
-        `, [rewardId, nfnode]);
+        await client.query(insertRewardsPerEpochNFNodeLinksQuery(rewardId, nfnode));
 
         // 3. Insert in rewards_per_epoches_pool_per_epoch_links
-        await client.query(`
-            INSERT INTO rewards_per_epoches_pool_per_epoch_links
-            (rewards_per_epoch_id, pool_per_epoch_id)
-            VALUES ($1, $2)
-        `, [rewardId, pool_per_epoch]);
+        await client.query(insertRewardsPerEpochPoolPerEpochLinksQuery(rewardId, pool_per_epoch));
 
         await client.query('COMMIT');
 
         // return the complete document
-        const { rows: [result] } = await client.query(`
-            SELECT 
-                rpe.*,
-                n.id as nfnode_id,
-                ppe.id as pool_per_epoch_id
-            FROM rewards_per_epoches rpe
-            LEFT JOIN rewards_per_epoches_nfnode_links rnl ON rnl.rewards_per_epoch_id = rpe.id
-            LEFT JOIN nfnodes n ON n.id = rnl.nfnode_id
-            LEFT JOIN rewards_per_epoches_pool_per_epoch_links rpel ON rpel.rewards_per_epoch_id = rpe.id
-            LEFT JOIN pool_per_epoch ppe ON ppe.id = rpel.pool_per_epoch_id
-            WHERE rpe.id = $1
-        `, [rewardId]);
+        const { rows: [result] } = await client.query(returnRewardsPerEpochQuery(rewardId));
 
-        return result;
+        return result as RewardPerEpoch
 
     } catch (error) {
         await client.query('ROLLBACK');
@@ -71,3 +54,32 @@ export const createRewardsPerEpoch = async (payload: RewardPerEpochEntry) => {
         client.release();
     }
 };
+
+
+export const processRewardsBatch = async (
+    params: {
+        rewards: UpdatePoolNetworkScoreResponse['rewards'],
+        networkScore: number,
+        totalRewardsAmount: number
+    },
+) => {
+    const { rewards, networkScore, totalRewardsAmount } = params;
+    const updateQueries = rewards
+        .map(reward => {
+            const proportionalShare = (reward.hotspot_score / networkScore) * totalRewardsAmount;
+            const amount = Number(roundDownTo6Decimals(proportionalShare / 1000000));
+            return {
+                text: `
+                    UPDATE ${rewardsPerEpochTable}  
+                    SET amount = $1,
+                        status = 'ready-for-claim',
+                        owner_payment_status = 'pending',
+                        host_payment_status = 'pending'
+                    WHERE id = $2
+                `,
+                values: [amount, reward.id]
+            };
+        });
+
+    await Promise.all(updateQueries.map(query => pool.query(query.text, query.values)));
+}

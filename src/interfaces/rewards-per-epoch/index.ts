@@ -14,6 +14,10 @@ export interface RewardPerEpochEntry {
     host_payment_status: PaymentStatus
 }
 
+export interface RewardPerEpoch extends RewardPerEpochEntry {
+    id: number
+}
+
 
 export interface WUPIMessage {
     nas_id: string

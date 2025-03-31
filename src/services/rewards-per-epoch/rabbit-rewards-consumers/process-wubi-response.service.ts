@@ -9,19 +9,20 @@ import { messageBatchTracker } from "@services/rabbitmq-wrapper/messages-batch-t
 
 let lastMessageTime = Date.now(); // Global variable to track the last message
 
-const SLOW_THRESHOLD = 3000; // 3 seconds
+const SLOW_THRESHOLD = 15000; // 15 seconds
 
 export const processWubiRabbitResponse = async (msg: ConsumeMessage) => {
     const currentTime = Date.now();
     const timeSinceLastMessage = currentTime - lastMessageTime;
     lastMessageTime = currentTime;
     
-    const startTime = performance.now();
+    const startTime = Date.now();
     const timeMarks: { [key: string]: number } = {};
 
     try {
+        const beforeParsing = Date.now();
         const message = JSON.parse(msg.content.toString());
-        timeMarks.parsing = performance.now() - startTime;
+        timeMarks.parsing = Date.now() - beforeParsing;
 
         const { hotspot_score, wayru_device_id, epoch_id, last_item } = message as WubiMessage;
         
@@ -32,22 +33,22 @@ export const processWubiRabbitResponse = async (msg: ConsumeMessage) => {
         }
 
         // Get instance of RewardSystem
-        const beforeRewardSystem = performance.now();
+        const beforeRewardSystem = Date.now();
         const rewardSystemProgram = await RewardSystemManager.getInstance();
-        timeMarks.rewardSystemInit = performance.now() - beforeRewardSystem;
+        timeMarks.rewardSystemInit = Date.now() - beforeRewardSystem;
 
         // Check eligibility
-        const beforeEligibility = performance.now();
+        const beforeEligibility = Date.now();
         const {isEligible, nfnode} = await getEligibleWubiNFNodes(wayru_device_id, rewardSystemProgram, false);
-        timeMarks.eligibilityCheck = performance.now() - beforeEligibility;
+        timeMarks.eligibilityCheck = Date.now() - beforeEligibility;
 
         // Calculate multiplier
-        const beforeMultiplier = performance.now();
+        const beforeMultiplier = Date.now();
         const multiplier = isEligible ? getNfNodeMultiplier(nfnode) : 0;
-        timeMarks.multiplierCalc = performance.now() - beforeMultiplier;
+        timeMarks.multiplierCalc = Date.now() - beforeMultiplier;
 
         // Create rewards
-        const beforeRewards = performance.now();
+        const beforeRewards = Date.now();
         const rewards = await createRewardsPerEpoch({
             hotspot_score: hotspot_score * multiplier,
             nfnode: nfnode.id,
@@ -59,7 +60,7 @@ export const processWubiRabbitResponse = async (msg: ConsumeMessage) => {
             owner_payment_status: 'pending',
             host_payment_status: 'pending',
         });
-        timeMarks.rewardsCreation = performance.now() - beforeRewards;
+        timeMarks.rewardsCreation = Date.now() - beforeRewards;
 
         if (!rewards) {
             console.error('error creating rewards per epoch');
@@ -67,9 +68,9 @@ export const processWubiRabbitResponse = async (msg: ConsumeMessage) => {
         }
 
         // Track message
-        const beforeTracking = performance.now();
+        const beforeTracking = Date.now();
         const { isLastMessage } = messageBatchTracker.trackMessage(epoch_id.toString());
-        timeMarks.messageTracking = performance.now() - beforeTracking;
+        timeMarks.messageTracking = Date.now() - beforeTracking;
 
         if (isLastMessage) {
             eventHub.emit(EventName.LAST_REWARD_CREATED, {
@@ -78,10 +79,10 @@ export const processWubiRabbitResponse = async (msg: ConsumeMessage) => {
             });
         }
 
-        timeMarks.total = performance.now() - startTime;
+        timeMarks.total = Date.now() - startTime;
         
         if (timeMarks.total > SLOW_THRESHOLD) {
-            console.warn('⚠️ Slow message processing:', {
+            console.warn('⚠️ Slow wUBI message processing:', {
                 messageId: msg.properties.correlationId,
                 wayru_device_id,
                 times: timeMarks,

@@ -4,10 +4,11 @@ import { PoolPerEpoch, PoolPerEpochEntry, UpdatePoolNetworkScoreResponse } from 
 import { RewardPerEpochEntry } from "@interfaces/rewards-per-epoch";
 import { getPoolPerEpochAmounts } from "./pool-per-epoch.service";
 import moment from "moment";
+import { poolPerEpochTable, selectRewardsByPoolPerEpochIdQuery } from "./helpers";
 
 export const getPoolPerEpochById = async (epochId: number): Promise<PoolPerEpoch | null> => {
     try {
-        const result = await pool.query('SELECT * FROM pool_per_epoch WHERE id = $1', [epochId]);
+        const result = await pool.query(`SELECT * FROM ${poolPerEpochTable} WHERE id = $1`, [epochId]);
         const document = result?.rows?.length > 0 ? result.rows[0] : null;
         return document;
     } catch (error) {
@@ -38,7 +39,7 @@ export const createCurrentPoolPerEpoch = async (): Promise<PoolPerEpoch | null> 
         }
 
         // insert into pool_per_epoch
-        const result = await pool.query('INSERT INTO pool_per_epoch (epoch, ubi_pool, upi_pool, network_score, network_score_upi, status) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *', [epochData.epoch, epochData.ubi_pool, epochData.upi_pool, epochData.network_score, epochData.network_score_upi, 'calculating']);
+        const result = await pool.query(`INSERT INTO ${poolPerEpochTable} (epoch, ubi_pool, upi_pool, network_score, network_score_upi, status) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`, [epochData.epoch, epochData.ubi_pool, epochData.upi_pool, epochData.network_score, epochData.network_score_upi, 'calculating']);
 
         // return the document created
         return result?.rows?.length > 0 ? result.rows[0] : null
@@ -73,8 +74,6 @@ export const getPoolPerEpochNumber = async (targetDate: Date) => {
     }
 }
 
-export const getTestnetAmount = (epochNumber: number) => (epochNumber > 0 ? BigInt(960000000000) : BigInt(0))
-
 export const updatePoolPerEpochById = async (id: number, data: Partial<PoolPerEpochEntry>) => {
     try {
         // Filter only the fields that have values
@@ -95,7 +94,7 @@ export const updatePoolPerEpochById = async (id: number, data: Partial<PoolPerEp
             .join(', ');
 
         const query = `
-            UPDATE pool_per_epoch 
+            UPDATE ${poolPerEpochTable} 
             SET ${setClause} 
             WHERE id = ${id}
             RETURNING *
@@ -113,7 +112,7 @@ export const updatePoolPerEpochById = async (id: number, data: Partial<PoolPerEp
 export const updatePoolNetworkScore = async (epochId: number, networkScore: number, type: RewardPerEpochEntry['type']): Promise<UpdatePoolNetworkScoreResponse> => {
     // First update the network scores
     const { rows: [epoch] } = await pool.query(`
-         UPDATE pool_per_epoch
+         UPDATE ${poolPerEpochTable}
         SET ${type === 'wUBI' ? 'network_score' : 'network_score_upi'} = $1
         WHERE id = $2
         RETURNING *
@@ -122,20 +121,7 @@ export const updatePoolNetworkScore = async (epochId: number, networkScore: numb
     };
 
     // Get only the necessary fields from the rewards
-    const { rows: rewards } = await pool.query(`
-       SELECT 
-        rpe.id,
-        rpe.hotspot_score,
-        rpe.status,
-        rpe.type
-    FROM rewards_per_epoches rpe
-    INNER JOIN rewards_per_epoches_pool_per_epoch_links rel 
-        ON rel.rewards_per_epoch_id = rpe.id
-    WHERE rel.pool_per_epoch_id = $1
-        AND rpe.type = $2
-        AND rpe.status = 'calculating'
-        AND rpe.hotspot_score > 0
-    `, [epochId, type]) as { 
+    const { rows: rewards } = await pool.query(selectRewardsByPoolPerEpochIdQuery(epochId, type)) as { 
         rows: UpdatePoolNetworkScoreResponse['rewards']
     };
 
@@ -146,7 +132,7 @@ export const updatePoolNetworkScore = async (epochId: number, networkScore: numb
 }
 
 export const getPoolPerEpochByEpoch = async (epoch: Date) => {
-    const {rows} = await pool.query('SELECT * FROM pool_per_epoch WHERE epoch = $1', [epoch])
+    const {rows} = await pool.query(`SELECT * FROM ${poolPerEpochTable} WHERE epoch = $1`, [epoch])
     const document = rows?.length > 0 ? rows[0] : null
     return document as PoolPerEpoch | null
 }

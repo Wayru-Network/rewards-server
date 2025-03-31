@@ -72,8 +72,8 @@ export const initiateRewardsProcessing = async (poolId?: number):
         }
 
         // now process the nfnodes and calculate their scores
-         await processWUBIWithConcurrency(wubiNFNodes, epoch)
-        // await processWUPIWithConcurrency(wupiNFNodes, epoch)
+        processWUBIWithConcurrency(wubiNFNodes, epoch)
+        processWUPIWithConcurrency(wupiNFNodes, epoch)
         return { error: false, epoch: epoch }
     } catch (error) {
         console.error('error processing rewards per epoch', error)

@@ -1,5 +1,5 @@
 import { ENV } from "@config/env/env"
-import { getPoolPerEpochNumber, getTestnetAmount, getPoolPerEpochByEpoch as getPoolPerEpochByEpochQuery} from "./queries"
+import { getPoolPerEpochNumber, getPoolPerEpochByEpoch as getPoolPerEpochByEpochQuery} from "./queries"
 import moment from "moment"
 
 export const getPoolPerEpochAmounts = async (epoch: Date) => {
@@ -132,3 +132,5 @@ export const getPoolPerEpochByEpoch = async (epoch: Date) => {
   const epochDocument = await getPoolPerEpochByEpochQuery(epoch)
   return epochDocument
 }
+
+export const getTestnetAmount = (epochNumber: number) => (epochNumber > 0 ? BigInt(960000000000) : BigInt(0))
