@@ -9,14 +9,9 @@ import { eventHub } from "@services/events/event-hub";
 import { EventName } from "@interfaces/events";
 import moment from "moment";
 
-let lastMessageTime = Date.now();
-const SLOW_THRESHOLD = 15000; // 15 seconds
-
 export const processWupiRabbitResponse = async (msg: ConsumeMessage) => {
     const currentTime = Date.now();
-    const timeSinceLastMessage = currentTime - lastMessageTime;
-    lastMessageTime = currentTime;
-    
+
     const startTime = Date.now();
     const timeMarks: { [key: string]: number } = {};
 
@@ -36,19 +31,13 @@ export const processWupiRabbitResponse = async (msg: ConsumeMessage) => {
         timeMarks.rewardSystemInit = Date.now() - beforeRewardSystem;
 
         // Get eligible nfnode
-        const beforeEligibility = Date.now();
         const {isEligible, nfnode} = await getEligibleWupiNFNodes(nfnode_id, rewardSystemProgram, false);
-        timeMarks.eligibilityCheck = Date.now() - beforeEligibility;
 
         // Calculate multiplier
-        const beforeMultiplier = Date.now();
         const multiplier = isEligible ? getNfNodeMultiplier(nfnode) : 0;
-        timeMarks.multiplierCalc = Date.now() - beforeMultiplier;
 
         // Get epoch document
-        const beforeEpochDoc = Date.now();
         const epochDocument = await getPoolPerEpochByEpoch(epoch);
-        timeMarks.epochDocRetrieval = Date.now() - beforeEpochDoc;
 
         if (!epochDocument) {
             console.error('epoch not found');
@@ -93,21 +82,6 @@ export const processWupiRabbitResponse = async (msg: ConsumeMessage) => {
         }
 
         timeMarks.total = Date.now() - startTime;
-        
-        if (timeMarks.total > SLOW_THRESHOLD) {
-            console.warn('⚠️ Slow WUPI message processing:', {
-                messageId: msg.properties.correlationId,
-                nas_id,
-                nfnode_id,
-                times: timeMarks,
-                isEligible,
-                messageTimings: {
-                    receivedAt: new Date(currentTime).toISOString(),
-                    timeSinceLastMessage: `${timeSinceLastMessage}ms`,
-                    processingTime: `${timeMarks.total}ms`
-                }
-            });
-        }
     } catch (error) {
         console.error('🚨 Error processing WUPI rabbit response:', error);
         return;
