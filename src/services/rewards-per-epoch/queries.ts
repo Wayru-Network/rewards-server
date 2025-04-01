@@ -17,10 +17,19 @@ export const createRewardsPerEpoch = async (payload: RewardPerEpochEntry) => {
 
         const insertResult = await client.query(`
             INSERT INTO ${rewardsPerEpochTable} 
-            (type, hotspot_score, amount, owner_payment_status, host_payment_status, status, currency, published_at)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+            (type, hotspot_score, amount, owner_payment_status, host_payment_status, status, currency, published_at, created_at)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
             RETURNING id
-        `, [type, hotspot_score, amount ?? 0, owner_payment_status, host_payment_status, status, currency, new Date()]);
+        `, [
+            type,
+            hotspot_score,
+            amount ?? 0,
+            owner_payment_status,
+            host_payment_status,
+            status,
+            currency,
+            new Date(),
+            new Date()]);
 
         if (!insertResult.rows[0]?.id) {
             throw new Error(`Failed to insert into ${rewardsPerEpochTable}`);
@@ -74,10 +83,11 @@ export const processRewardsBatch = async (
                     SET amount = $1,
                         status = 'ready-for-claim',
                         owner_payment_status = 'pending',
-                        host_payment_status = 'pending'
+                        host_payment_status = 'pending',
+                        updated_at = $3
                     WHERE id = $2
                 `,
-                values: [amount, reward.id]
+                values: [amount, reward.id, new Date()]
             };
         });
 

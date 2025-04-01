@@ -39,7 +39,15 @@ export const createCurrentPoolPerEpoch = async (): Promise<PoolPerEpoch | null> 
         }
 
         // insert into pool_per_epoch
-        const result = await pool.query(`INSERT INTO ${poolPerEpochTable} (epoch, ubi_pool, upi_pool, network_score, network_score_upi, status) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`, [epochData.epoch, epochData.ubi_pool, epochData.upi_pool, epochData.network_score, epochData.network_score_upi, 'calculating']);
+        const result = await pool.query(`INSERT INTO ${poolPerEpochTable} (epoch, ubi_pool, upi_pool, network_score, network_score_upi, status, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
+            [
+                epochData.epoch,
+                epochData.ubi_pool,
+                epochData.upi_pool,
+                epochData.network_score,
+                epochData.network_score_upi,
+                'calculating',
+                new Date()]);
 
         // return the document created
         return result?.rows?.length > 0 ? result.rows[0] : null
@@ -113,15 +121,16 @@ export const updatePoolNetworkScore = async (epochId: number, networkScore: numb
     // First update the network scores
     const { rows: [epoch] } = await pool.query(`
          UPDATE ${poolPerEpochTable}
-        SET ${type === 'wUBI' ? 'network_score' : 'network_score_upi'} = $1
-        WHERE id = $2
+        SET ${type === 'wUBI' ? 'network_score' : 'network_score_upi'} = $1,
+            updated_at = $2
+        WHERE id = $3
         RETURNING *
-    `, [networkScore ?? 0, epochId]) as { 
+    `, [networkScore ?? 0, new Date(), epochId]) as {
         rows: PoolPerEpoch[]
     };
 
     // Get only the necessary fields from the rewards
-    const { rows: rewards } = await pool.query(selectRewardsByPoolPerEpochIdQuery(epochId, type)) as { 
+    const { rows: rewards } = await pool.query(selectRewardsByPoolPerEpochIdQuery(epochId, type)) as {
         rows: UpdatePoolNetworkScoreResponse['rewards']
     };
 
@@ -132,7 +141,7 @@ export const updatePoolNetworkScore = async (epochId: number, networkScore: numb
 }
 
 export const getPoolPerEpochByEpoch = async (epoch: Date) => {
-    const {rows} = await pool.query(`SELECT * FROM ${poolPerEpochTable} WHERE epoch = $1`, [epoch])
+    const { rows } = await pool.query(`SELECT * FROM ${poolPerEpochTable} WHERE epoch = $1`, [epoch])
     const document = rows?.length > 0 ? rows[0] : null
     return document as PoolPerEpoch | null
 }
