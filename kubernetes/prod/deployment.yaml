@@ -18,29 +18,31 @@ spec:
         image: ${CONTAINER_REGISTRY}/rewards-server:${IMAGE_TAG}
         env:
             - name: DATABASE_HOST
-              value: "172.168.206.66"
+              value: "57.151.72.86"
             - name: DATABASE_NAME
-              value: dashboard_prod_test
+              value: dashboard_prod
             - name: DATABASE_PORT
               value: "5432"
             - name: DATABASE_USERNAME
               value: REWARDS_SERVER
             - name: NODE_ENV
-              value: develop
+              value: production
+            - name: REWARDS_MODE
+              value: test
             - name: PORT
               value: "80"
             - name: RABBIT_HOST
-              value: 52.189.31.214:5672
+              value: 64.236.65.232:5672
             - name: WUBI_API_QUEUE
-              value: WIFI_API_QUEUE_DEV
+              value: WIFI_API_QUEUE_PROD
             - name: WUBI_API_QUEUE_RESPONSE
-              value: REWARDS_SERVER_DEV
+              value: REWARDS_SERVER_PROD
             - name: WUPI_API_QUEUE
-              value: NAS_API_QUEUE_DEV
+              value: NAS_API_QUEUE_PROD
             - name: WUPI_API_QUEUE_RESPONSE
-              value: REWARDS_SERVER_WUPI_DEV
+              value: REWARDS_SERVER_WUPI_PROD
             - name: NAS_API
-              value: https://nas.api.internal.wayru.tech
+              value: https://nas.api.wayru.tech
             - name: NAS_API_KEY
               valueFrom:
                 secretKeyRef:

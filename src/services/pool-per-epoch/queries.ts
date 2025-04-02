@@ -1,11 +1,14 @@
 import { ENV } from "@config/env/env";
 import pool from "../../config/db";
-import { PoolPerEpoch, PoolPerEpochEntry } from "../../interfaces/pool-per-epoch";
+import { PoolPerEpoch, PoolPerEpochEntry, UpdatePoolNetworkScoreResponse } from "../../interfaces/pool-per-epoch";
+import { RewardPerEpochEntry } from "@interfaces/rewards-per-epoch";
+import { getPoolPerEpochAmounts } from "./pool-per-epoch.service";
 import moment from "moment";
+import { poolPerEpochTable, selectRewardsByPoolPerEpochIdQuery } from "./helpers";
 
 export const getPoolPerEpochById = async (epochId: number): Promise<PoolPerEpoch | null> => {
     try {
-        const result = await pool.query('SELECT * FROM pool_per_epoch WHERE epoch_id = $1', [epochId]);
+        const result = await pool.query(`SELECT * FROM ${poolPerEpochTable} WHERE id = $1`, [epochId]);
         const document = result?.rows?.length > 0 ? result.rows[0] : null;
         return document;
     } catch (error) {
@@ -14,7 +17,7 @@ export const getPoolPerEpochById = async (epochId: number): Promise<PoolPerEpoch
     }
 }
 
-export const createCurrentPoolPerEpoch = async () : Promise<PoolPerEpoch | null> => {
+export const createCurrentPoolPerEpoch = async (): Promise<PoolPerEpoch | null> => {
     try {
         const lastEpochDateNumber = new Date().setDate(new Date().getDate() - 1)
         const lastEpochDate = new Date(lastEpochDateNumber)
@@ -33,13 +36,21 @@ export const createCurrentPoolPerEpoch = async () : Promise<PoolPerEpoch | null>
             upi_pool: wayruPoolUpi,
             network_score: 0,
             network_score_upi: 0,
-          }
-        
-          // insert into pool_per_epoch
-          const result = await pool.query('INSERT INTO pool_per_epoch (epoch, ubi_pool, upi_pool, network_score, network_score_upi) VALUES ($1, $2, $3, $4, $5)', [epochData.epoch, epochData.ubi_pool, epochData.upi_pool, epochData.network_score, epochData.network_score_upi]);
+        }
 
-          // return the document created
-          return result?.rows.length > 0 ? result.rows[0] : null
+        // insert into pool_per_epoch
+        const result = await pool.query(`INSERT INTO ${poolPerEpochTable} (epoch, ubi_pool, upi_pool, network_score, network_score_upi, status, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
+            [
+                epochData.epoch,
+                epochData.ubi_pool,
+                epochData.upi_pool,
+                epochData.network_score,
+                epochData.network_score_upi,
+                'calculating',
+                new Date()]);
+
+        // return the document created
+        return result?.rows?.length > 0 ? result.rows[0] : null
     } catch (error) {
         console.error('createCurrentPoolPerEpoch error', error);
         return null;
@@ -71,129 +82,6 @@ export const getPoolPerEpochNumber = async (targetDate: Date) => {
     }
 }
 
-export const getPoolPerEpochAmounts = async (epoch: Date) => {
-    try {
-        const period = ENV.REWARDS_PERIOD
-        const epochNumber = await getPoolPerEpochNumber(epoch)
-        const epochYear = period === 'mainnet' ? Math.ceil(epochNumber / 365) : Math.ceil(epochNumber / 7)
-        let ubiPoolPercentage: number
-        let upiPoolPercentage: number
-        let manufacturersPoolPercentage: number
-
-        switch (epochYear) {
-            case 1:
-                ubiPoolPercentage = 81
-                upiPoolPercentage = 18
-                manufacturersPoolPercentage = 1
-                break
-            case 2:
-                ubiPoolPercentage = 63
-                upiPoolPercentage = 36
-                manufacturersPoolPercentage = 1
-                break
-            case 3:
-                ubiPoolPercentage = 45
-                upiPoolPercentage = 54
-                manufacturersPoolPercentage = 1
-                break
-            case 4:
-                ubiPoolPercentage = 27
-                upiPoolPercentage = 72
-                manufacturersPoolPercentage = 1
-                break
-            case 5:
-                ubiPoolPercentage = 9
-                upiPoolPercentage = 90
-                manufacturersPoolPercentage = 1
-                break
-            case 6:
-                if (period === 'testnet-2') {
-                    ubiPoolPercentage = 27
-                    upiPoolPercentage = 72
-                    manufacturersPoolPercentage = 1
-                    break
-                } else {
-                    ubiPoolPercentage = 9
-                    upiPoolPercentage = 90
-                    manufacturersPoolPercentage = 1
-                    break
-                }
-
-            case 7:
-                if (period === 'testnet-2') {
-                    ubiPoolPercentage = 45
-                    upiPoolPercentage = 54
-                    manufacturersPoolPercentage = 1
-                    break
-
-                } else {
-                    ubiPoolPercentage = 9
-                    upiPoolPercentage = 90
-                    manufacturersPoolPercentage = 1
-                    break
-                }
-            case 8:
-                if (period === 'testnet-2') {
-                    ubiPoolPercentage = 63
-                    upiPoolPercentage = 36
-                    manufacturersPoolPercentage = 1
-                    break
-
-                } else {
-                    ubiPoolPercentage = 9
-                    upiPoolPercentage = 90
-                    manufacturersPoolPercentage = 1
-                    break
-                }
-            case 9:
-                if (period === 'testnet-2') {
-
-                    ubiPoolPercentage = 81
-                    upiPoolPercentage = 18
-                    manufacturersPoolPercentage = 1
-                    break
-                } else {
-                    ubiPoolPercentage = 9
-                    upiPoolPercentage = 90
-                    manufacturersPoolPercentage = 1
-                    break
-                }
-            default:
-                ubiPoolPercentage = 9
-                upiPoolPercentage = 90
-                manufacturersPoolPercentage = 1
-                break
-        }
-        const epochAmount = period === 'mainnet' ? BigInt(getPoolPerEpochAmount(epochNumber)) : getTestnetAmount(epochNumber)
-        const upiAmount = BigInt((BigInt(epochAmount) * BigInt(upiPoolPercentage)) / BigInt(100))
-        const ubiAmount = BigInt((BigInt(epochAmount) * BigInt(ubiPoolPercentage)) / BigInt(100))
-
-        const manufacturersAmount = epochAmount - upiAmount - ubiAmount
-        return { ubiAmount, upiAmount, manufacturersAmount, epochAmount }
-    } catch (error) {
-        console.error('getPoolPerEpochAmounts error', error);
-        return null;
-    }
-}
-
-export const getPoolPerEpochAmount = (epochNumber: number) => {
-    if (epochNumber === 0) {
-        return BigInt(0)
-    }
-    if (epochNumber === 1) {
-        return BigInt(1200000000000)
-    } else if (epochNumber === 36525) {
-        return BigInt(70630823)
-    } else if (epochNumber > 36525) {
-        return BigInt(0)
-    }
-
-    const reductionPercentage = 0.999733349023419
-    return BigInt((1200000000000 * Math.pow(Number(reductionPercentage), epochNumber - 1)).toFixed(0))
-}
-
-export const getTestnetAmount = (epochNumber: number) => (epochNumber > 0 ? BigInt(960000000000) : BigInt(0))
-
 export const updatePoolPerEpochById = async (id: number, data: Partial<PoolPerEpochEntry>) => {
     try {
         // Filter only the fields that have values
@@ -214,7 +102,7 @@ export const updatePoolPerEpochById = async (id: number, data: Partial<PoolPerEp
             .join(', ');
 
         const query = `
-            UPDATE pool_per_epoch 
+            UPDATE ${poolPerEpochTable} 
             SET ${setClause} 
             WHERE id = ${id}
             RETURNING *
@@ -227,4 +115,33 @@ export const updatePoolPerEpochById = async (id: number, data: Partial<PoolPerEp
         console.error('updatePoolPerEpoch error:', error);
         return null;
     }
+}
+
+export const updatePoolNetworkScore = async (epochId: number, networkScore: number, type: RewardPerEpochEntry['type']): Promise<UpdatePoolNetworkScoreResponse> => {
+    // First update the network scores
+    const { rows: [epoch] } = await pool.query(`
+         UPDATE ${poolPerEpochTable}
+        SET ${type === 'wUBI' ? 'network_score' : 'network_score_upi'} = $1,
+            updated_at = $2
+        WHERE id = $3
+        RETURNING *
+    `, [networkScore ?? 0, new Date(), epochId]) as {
+        rows: PoolPerEpoch[]
+    };
+
+    // Get only the necessary fields from the rewards
+    const { rows: rewards } = await pool.query(selectRewardsByPoolPerEpochIdQuery(epochId, type)) as {
+        rows: UpdatePoolNetworkScoreResponse['rewards']
+    };
+
+    return {
+        epoch,
+        rewards
+    };
+}
+
+export const getPoolPerEpochByEpoch = async (epoch: Date) => {
+    const { rows } = await pool.query(`SELECT * FROM ${poolPerEpochTable} WHERE epoch = $1`, [epoch])
+    const document = rows?.length > 0 ? rows[0] : null
+    return document as PoolPerEpoch | null
 }

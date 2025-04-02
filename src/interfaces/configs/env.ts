@@ -20,6 +20,12 @@ export type ENV_CONFIG = {
   RABBIT_QUEUES: {
     WUBI_API_QUEUE: string,
     WUBI_API_QUEUE_RESPONSE: string,
-  }
+    WUPI_API_QUEUE: string,
+    WUPI_API_QUEUE_RESPONSE: string,
+  },
+  SOLANA_API_KEY: string,
+  SOLANA_API_URL: string,
+  SOLANA_PRIVATE_KEY: string,
+  REWARDS_MODE: 'production' | 'test',
 };
 

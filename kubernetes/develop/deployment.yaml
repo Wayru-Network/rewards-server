@@ -27,6 +27,8 @@ spec:
               value: REWARDS_SERVER
             - name: NODE_ENV
               value: develop
+            - name: REWARDS_MODE
+              value: test
             - name: PORT
               value: "80"
             - name: RABBIT_HOST

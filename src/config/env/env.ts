@@ -19,7 +19,13 @@ export const ENV: ENV_CONFIG = {
   RABBIT_PASS: process.env.RABBIT_PASS || 'guest',
   RABBIT_HOST: process.env.RABBIT_HOST || 'localhost',
   RABBIT_QUEUES: {
-    WUBI_API_QUEUE: process.env.WUBI_API_QUEUE || 'wifi_api_queue_david',
-    WUBI_API_QUEUE_RESPONSE: process.env.WUBI_API_QUEUE_RESPONSE || 'reward_server_local',
-  }
+    WUBI_API_QUEUE: process.env.WUBI_API_QUEUE as string,
+    WUBI_API_QUEUE_RESPONSE: process.env.WUBI_API_QUEUE_RESPONSE as string,
+    WUPI_API_QUEUE: process.env.WUPI_API_QUEUE as string,
+    WUPI_API_QUEUE_RESPONSE: process.env.WUPI_API_QUEUE_RESPONSE as string
+  },
+  SOLANA_API_KEY: process.env.SOLANA_API_KEY || '',
+  SOLANA_API_URL: process.env.SOLANA_API_URL || 'https://api.devnet.solana.com',
+  SOLANA_PRIVATE_KEY: process.env.SOLANA_PRIVATE_KEY || '',
+  REWARDS_MODE: process.env.REWARDS_MODE as 'production' | 'test' || 'test',
 };

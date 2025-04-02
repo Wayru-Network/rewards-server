@@ -1,4 +1,8 @@
+import { BN } from "@coral-xyz/anchor"
+import { PublicKey } from "@solana/web3.js"
+
 export type NfNodeStatus = "active" | "frozen" | "inactive" | "migrated"
+export type NFNodeType = 'don' | 'byod' | 'wayruHotspot'
 
 export interface NfNode {
     id: number
@@ -24,4 +28,48 @@ export interface NfNode {
 
 export type NfNodeEntry = Omit<NfNode, 'id'>
 
-export type NFNodeIdAndWayruDeviceId = Pick<NfNode, 'id' | 'wayru_device_id'>
+export type WubiNFNodes = Pick<NfNode, 'id' | 'wayru_device_id'>
+export type WupiNFNodes = Pick<NfNode, 'id' | 'mac'>
+
+
+export type NFNodeEntryDetails = {
+    ownerDetails: {
+        lastClaimedTimestamp: number;
+        address: string;
+    };
+    hostDetails: {
+        address: string;
+        profitPercentage: number;
+        lastClaimedTimestamp: number;
+    };
+    manufacturerDetails: {
+        address: string;
+        lastClaimedTimestamp: number;
+    };
+    nfnodeDetails: {
+        type: { don: {} } | { byod: {} } | { wayruHotspot: {} };
+        depositAmount: number
+        depositUnixTimestamp: number;
+        totalRewardsClaimed: number
+    };
+};
+
+
+export type NFNodeEntry = {
+    ownerLastClaimedTimestamp: BN;
+    host: PublicKey;
+    hostShare: BN;
+    hostLastClaimedTimestamp: BN;
+    manufacturer: PublicKey;
+    manufacturerLastClaimedTimestamp: BN;
+    totalRewardsClaimed: BN;
+    depositAmount: BN;
+    depositTimestamp: BN;
+    nfnodeType: Record<NFNodeType, {}>;
+};
+
+export type NFNodeRewardType = 'wubi' | 'wupi';
+export interface NFNodeEligibilityConfig {
+    requiredDepositAmount: number;
+    type: NFNodeRewardType;
+}
