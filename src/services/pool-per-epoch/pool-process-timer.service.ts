@@ -3,7 +3,7 @@ import { EventName } from "@interfaces/events";
 import { updatePoolPerEpochById } from "@services/pool-per-epoch/queries";
 import { RewardSystemManager } from "@services/solana/reward-system/reward-system.manager";
 
-export class TimerService {
+export class PoolProcessTimer {
     private processStartTime: number | null = null;
     private processData: {
         totalWubiNFNodes: number;
@@ -42,7 +42,7 @@ export class TimerService {
                 startTime: new Date(this.processStartTime).toISOString(),
                 endTime: new Date().toISOString(),
                 averageTimePerNode: this.processData.totalWubiNFNodes > 0
-                    ? `${(processingTime / this.processData.totalWubiNFNodes).toFixed(2)}ms per node`
+                    ? `${(processingTime / this.processData.totalWubiNFNodes).toFixed(2)}ms per nfnode`
                     : 'N/A'
             });
 
@@ -85,7 +85,8 @@ export class TimerService {
             console.log('🔔 All processes completed', result);
             updatePoolPerEpochById(this.processData.epochId, {
                 processing_metrics: result,
-                status: 'ready-for-claim'
+                wubi_processing_status: 'messages_processed',
+                wupi_processing_status: 'messages_processed'
             });
             // clean up reward system manager
             RewardSystemManager.cleanup()

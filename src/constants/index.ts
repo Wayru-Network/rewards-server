@@ -7,3 +7,4 @@ export const WUPI_SYNC_ATTEMPTS = 10
 export const WUPI_DELAY_MINUTES = 2
 export const ERROR_DELAY = 1000
 export const BATCH_SIZE_REWARDS = 500
+export const POOL_PER_EPOCH_UPDATE_INTERVAL = 8000 // 8 seconds

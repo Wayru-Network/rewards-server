@@ -17,13 +17,13 @@ export const getPoolPerEpochById = async (epochId: number): Promise<PoolPerEpoch
     }
 }
 
-export const createCurrentPoolPerEpoch = async (): Promise<PoolPerEpoch | null> => {
+export const createCurrentPoolPerEpoch = async (epochParams?: Partial<PoolPerEpochEntry>): Promise<PoolPerEpoch | null> => {
     try {
         const lastEpochDateNumber = new Date().setDate(new Date().getDate() - 1)
         const lastEpochDate = new Date(lastEpochDateNumber)
         const formattedEpoch = moment(lastEpochDate).utc().format('YYYY-MM-DD')
         // check if there is a epoch into pool per epoch with this last epoch date
-        const poolPerEpoch = await pool.query('SELECT * FROM pool_per_epoch WHERE epoch = $1', [formattedEpoch]);
+        const poolPerEpoch = await pool.query(`SELECT * FROM ${poolPerEpochTable} WHERE epoch = $1`, [formattedEpoch]);
         if (poolPerEpoch?.rows?.length > 0) {
             return poolPerEpoch.rows[0] as PoolPerEpoch
         }
@@ -34,20 +34,76 @@ export const createCurrentPoolPerEpoch = async (): Promise<PoolPerEpoch | null> 
             epoch: lastEpochDate,
             ubi_pool: wayruPoolUbi,
             upi_pool: wayruPoolUpi,
-            network_score: 0,
-            network_score_upi: 0,
+            network_score: epochParams?.network_score ?? 0,
+            network_score_upi: epochParams?.network_score_upi ?? 0,
+            wubi_nfnodes_with_score: epochParams?.wubi_nfnodes_with_score ?? 0,
+            wupi_nfnodes_with_score: epochParams?.wupi_nfnodes_with_score ?? 0,
+            wubi_nfnodes_total: epochParams?.wubi_nfnodes_total ?? 0,
+            wupi_nfnodes_total: epochParams?.wupi_nfnodes_total ?? 0,
+            wubi_processing_status: epochParams?.wubi_processing_status ?? 'sending_messages',
+            wupi_processing_status: epochParams?.wupi_processing_status ?? 'sending_messages',
+            wubi_error_message: epochParams?.wubi_error_message,
+            wupi_error_message: epochParams?.wupi_error_message,
+            wubi_messages_received: epochParams?.wubi_messages_received ?? 0,
+            wupi_messages_received: epochParams?.wupi_messages_received ?? 0,
+            wubi_messages_sent: epochParams?.wubi_messages_sent ?? 0,
+            wupi_messages_sent: epochParams?.wupi_messages_sent ?? 0,
         }
 
         // insert into pool_per_epoch
-        const result = await pool.query(`INSERT INTO ${poolPerEpochTable} (epoch, ubi_pool, upi_pool, network_score, network_score_upi, status, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
+        const result = await pool.query(`
+            INSERT INTO ${poolPerEpochTable} (
+                -- Basic dates and pools
+                epoch,
+                ubi_pool,
+                upi_pool,
+                created_at,
+                
+                -- Network scores
+                network_score,
+                network_score_upi,
+                
+                -- WUBI counters
+                wubi_nfnodes_total,
+                wubi_nfnodes_with_score,
+                wubi_messages_received,
+                wubi_messages_sent,
+                wubi_processing_status,
+                
+                -- WUPI counters
+                wupi_nfnodes_total,
+                wupi_nfnodes_with_score,
+                wupi_messages_received,
+                wupi_messages_sent,
+                wupi_processing_status
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14) 
+            RETURNING *`,
             [
+                // Basic dates and pools
                 epochData.epoch,
                 epochData.ubi_pool,
                 epochData.upi_pool,
+                new Date(),
+                
+                // Network scores
                 epochData.network_score,
                 epochData.network_score_upi,
-                'calculating',
-                new Date()]);
+                
+                // WUBI counters
+                epochData.wubi_nfnodes_total,
+                epochData.wubi_nfnodes_with_score,
+                epochData.wubi_messages_received,
+                epochData.wubi_messages_sent,
+                epochData.wubi_processing_status,
+                
+                // WUPI counters
+                epochData.wupi_nfnodes_total,
+                epochData.wupi_nfnodes_with_score,
+                epochData.wupi_messages_received,
+                epochData.wupi_messages_sent,
+                epochData.wupi_processing_status
+            ]
+        );
 
         // return the document created
         return result?.rows?.length > 0 ? result.rows[0] : null
@@ -144,4 +200,14 @@ export const getPoolPerEpochByEpoch = async (epoch: Date) => {
     const { rows } = await pool.query(`SELECT * FROM ${poolPerEpochTable} WHERE epoch = $1`, [epoch])
     const document = rows?.length > 0 ? rows[0] : null
     return document as PoolPerEpoch | null
+}
+
+export const getActivePools = async () => {
+    try {
+        const { rows } = await pool.query(`SELECT * FROM ${poolPerEpochTable} WHERE wubi_processing_status = 'processing' OR wupi_processing_status = 'processing'`)
+        return rows as PoolPerEpoch[]
+    } catch (error) {
+        console.error('getActivePools error', error);
+        return [];
+    }
 }
