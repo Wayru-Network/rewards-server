@@ -3,7 +3,7 @@ import { initiateRewardsProcessing } from '@services/rewards-per-epoch/rabbit-re
 
 export const initializeCronJobs = () => {
     cron.schedule('0 0 * * *', () => {
-        initiateRewardsProcessing()
+        //initiateRewardsProcessing()
     });
 
    

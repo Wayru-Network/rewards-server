@@ -4,6 +4,7 @@ import { startEventHub } from '@services/events/event-hub';
 import { initializeCronJobs } from '@crons/index';
 import { NetworkScoreCalculator } from '@services/pool-per-epoch/pool-network-score-calculator/network-score-calculator.service';
 import { PoolProcessTimer } from '@services/pool-per-epoch/pool-process-timer.service';
+import { poolMessageTracker } from '@services/pool-per-epoch/pool-messages-tracker.service';
 
 /**
  * Initialize all services
@@ -19,7 +20,7 @@ export const bootstrap = async () => {
         await initializeRabbitConsumers();
         new NetworkScoreCalculator();
         new PoolProcessTimer();
-
+        await poolMessageTracker.initialize();
         //TODO: initialize other requires services here
         
         console.log('✈️  All services initialized successfully ');

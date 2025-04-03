@@ -84,18 +84,18 @@ export const createCurrentPoolPerEpoch = async (epochParams?: Partial<PoolPerEpo
                 epochData.ubi_pool,
                 epochData.upi_pool,
                 new Date(),
-                
+
                 // Network scores
                 epochData.network_score,
                 epochData.network_score_upi,
-                
+
                 // WUBI counters
                 epochData.wubi_nfnodes_total,
                 epochData.wubi_nfnodes_with_score,
                 epochData.wubi_messages_received,
                 epochData.wubi_messages_sent,
                 epochData.wubi_processing_status,
-                
+
                 // WUPI counters
                 epochData.wupi_nfnodes_total,
                 epochData.wupi_nfnodes_with_score,
@@ -204,7 +204,14 @@ export const getPoolPerEpochByEpoch = async (epoch: Date) => {
 
 export const getActivePools = async () => {
     try {
-        const { rows } = await pool.query(`SELECT * FROM ${poolPerEpochTable} WHERE wubi_processing_status = 'processing' OR wupi_processing_status = 'processing'`)
+        const { rows } = await pool.query(`SELECT * FROM ${poolPerEpochTable} WHERE
+             wubi_processing_status = 'sending_messages' OR 
+             wupi_processing_status = 'sending_messages' OR 
+             wubi_processing_status = 'messages_sent' OR 
+             wupi_processing_status = 'messages_sent' OR 
+             wubi_processing_status = 'messages_not_sent' OR 
+             wupi_processing_status = 'messages_not_sent'
+             `)
         return rows as PoolPerEpoch[]
     } catch (error) {
         console.error('getActivePools error', error);

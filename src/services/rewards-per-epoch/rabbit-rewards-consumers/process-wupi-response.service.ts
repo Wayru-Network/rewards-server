@@ -7,12 +7,8 @@ import { getPoolPerEpochByEpoch } from "@services/pool-per-epoch/pool-per-epoch.
 import { eventHub } from "@services/events/event-hub";
 import { EventName } from "@interfaces/events";
 import { poolMessageTracker } from "@services/pool-per-epoch/pool-messages-tracker.service";
-const TIME_LIMIT = 5000;
 
 export const processWupiRabbitResponse = async (msg: ConsumeMessage) => {
-    const startTime = Date.now();
-    const timeMarks: { [key: string]: number } = {};
-
     try {
         const { nas_id, nfnode_id, epoch, total_valid_nas, score } = JSON.parse(msg.content.toString()) as WUPIMessageResponse;
 
@@ -22,9 +18,7 @@ export const processWupiRabbitResponse = async (msg: ConsumeMessage) => {
         }
 
         // Get instance of reward system program
-        const beforeRewardSystem = Date.now();
         const rewardSystemProgram = await RewardSystemManager.getInstance();
-        timeMarks.rewardSystemInit = Date.now() - beforeRewardSystem;
 
         // Get eligible nfnode
         const {isEligible, nfnode} = await getEligibleWupiNFNodes(nfnode_id, rewardSystemProgram, false);
@@ -44,7 +38,6 @@ export const processWupiRabbitResponse = async (msg: ConsumeMessage) => {
         const scoreInGb = Number(BigInt(score)) / 1000000000;
 
         // Create rewards
-        const beforeRewards = Date.now();
         const rewards = await createRewardsPerEpoch({
             hotspot_score: Number((scoreInGb > 0 ? scoreInGb * multiplier : 0).toFixed(6)),
             nfnode: nfnode_id,
@@ -56,7 +49,6 @@ export const processWupiRabbitResponse = async (msg: ConsumeMessage) => {
             owner_payment_status: 'pending',
             host_payment_status: 'pending',
         });
-        timeMarks.rewardsCreation = Date.now() - beforeRewards;
 
         if (!rewards) {
             console.error('error creating rewards per epoch');
@@ -64,9 +56,7 @@ export const processWupiRabbitResponse = async (msg: ConsumeMessage) => {
         }
 
         // Track message
-        const beforeTracking = Date.now();
         const { isLastMessage } = await poolMessageTracker.trackMessage(epochDocument.id, 'wupi');
-        timeMarks.messageTracking = Date.now() - beforeTracking;
 
         // update the pool per epoch
        if (isLastMessage) {
@@ -74,13 +64,6 @@ export const processWupiRabbitResponse = async (msg: ConsumeMessage) => {
                 epochId: epochDocument.id,
                 type: 'wUPI'
             });
-        }
-
-        timeMarks.total = Date.now() - startTime;
-        // check if the process take more than 6 seconds
-        if (timeMarks.total > TIME_LIMIT) {
-            console.error('🚨 WUPI process took more than 6 seconds', timeMarks);
-            return;
         }
     } catch (error) {
         console.error('🚨 Error processing WUPI rabbit response:', error);

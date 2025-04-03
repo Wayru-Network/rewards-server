@@ -29,7 +29,7 @@ export class PoolProcessTimer {
             });
         });
 
-        eventHub.on(EventName.WUBI_PROCESS_COMPLETED, () => {
+        eventHub.on(EventName.WUBI_PROCESS_COMPLETED, async () => {
             if (!this.processStartTime || !this.processData) return;
             this.wubiCompleted = true;
 
@@ -46,10 +46,15 @@ export class PoolProcessTimer {
                     : 'N/A'
             });
 
+            // update the pool per epoch with the processing metrics
+            await updatePoolPerEpochById(this.processData.epochId, {
+                wubi_processing_status: 'messages_processed'
+            });
+
             this.checkCompletion();
         });
 
-        eventHub.on(EventName.WUPI_PROCESS_COMPLETED, () => {
+        eventHub.on(EventName.WUPI_PROCESS_COMPLETED, async () => {
             if (!this.processStartTime || !this.processData) return;
             this.wupiCompleted = true;
 
@@ -64,6 +69,11 @@ export class PoolProcessTimer {
                 averageTimePerNode: this.processData.totalWupiNFNodes > 0
                     ? `${(processingTime / this.processData.totalWupiNFNodes).toFixed(2)}ms per node`
                     : 'N/A'
+            });
+
+            // update the pool per epoch with the processing metrics
+            await updatePoolPerEpochById(this.processData.epochId, {
+                wupi_processing_status: 'messages_processed'
             });
 
             this.checkCompletion();
@@ -84,9 +94,7 @@ export class PoolProcessTimer {
             }
             console.log('🔔 All processes completed', result);
             updatePoolPerEpochById(this.processData.epochId, {
-                processing_metrics: result,
-                wubi_processing_status: 'messages_processed',
-                wupi_processing_status: 'messages_processed'
+                processing_metrics: result
             });
             // clean up reward system manager
             RewardSystemManager.cleanup()

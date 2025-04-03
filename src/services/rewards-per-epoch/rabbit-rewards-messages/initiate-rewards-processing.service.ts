@@ -25,6 +25,9 @@ import moment from 'moment'
 export const initiateRewardsProcessing = async (poolId?: number):
     Promise<{ error: boolean, message?: string, epoch?: PoolPerEpoch }> => {
     try {
+        // await 5 seconds to start:
+        // TODO: remove this after testing
+        await new Promise(resolve => setTimeout(resolve, 5000));
         // get the start time of the process
         const startTime = Date.now()
 
@@ -43,11 +46,28 @@ export const initiateRewardsProcessing = async (poolId?: number):
             console.log('No epoch found, ending process');
             return { error: true, message: 'No epoch found' };
         }
+        // get the total of nfnodes from the epoch
+        const epochWubiNFNodesTotal = Number(epoch.wubi_nfnodes_total)
+        const epochWupiNFNodesTotal = Number(epoch.wupi_nfnodes_total)
+        // declare total wubi and wupi nfnodes to send messages
+        // TODO: remove this after testing, for the moment test with 10 nfnodes
+        const totalWubiNFNodes = wubiNFNodes //.slice(0, 50)
+        const totalWupiNFNodes = wupiNFNodes //.slice(0, 50)
+
+        // if the wubi_nfnodes_total or wupi_nfnodes_total is different from the total of nfnodes, we need to update the pool per epoch
+        if (totalWubiNFNodes.length !== epochWubiNFNodesTotal || totalWupiNFNodes.length !== epochWupiNFNodesTotal) {
+            console.log('Updating pool per epoch with new nfnodes total');
+            await updatePoolPerEpochById(epoch.id, {
+                wubi_nfnodes_total: totalWubiNFNodes.length,
+                wupi_nfnodes_total: totalWupiNFNodes.length
+            })
+        }
+
         // emit the event that the rewards process has started
         eventHub.emit(EventName.REWARDS_PROCESS_STARTED, {
             startTime,
-            totalWubiNFNodes: wubiNFNodes.length,
-            totalWupiNFNodes: wupiNFNodes.length,
+            totalWubiNFNodes: totalWubiNFNodes.length,
+            totalWupiNFNodes: totalWupiNFNodes.length,
             epochId: epoch.id
         })
 
@@ -58,7 +78,7 @@ export const initiateRewardsProcessing = async (poolId?: number):
         console.log('wayruEarned', wayruEarned)
 
         // if there aren't actives wubi or wupi nodes, we can return
-        const totalNodes = wubiNFNodes.length + wupiNFNodes.length;
+        const totalNodes = totalWubiNFNodes.length + totalWupiNFNodes.length;
         if (totalNodes === 0) {
             console.log('No active nodes found, ending process');
             return { error: true, message: 'No active nodes found' };
@@ -84,8 +104,9 @@ export const initiateRewardsProcessing = async (poolId?: number):
         poolMessageTracker.registerPool(epoch.id)
 
         // now process the nfnodes and calculate their scores
-        processWUBIWithConcurrency(wubiNFNodes, epoch)
-        processWUPIWithConcurrency(wupiNFNodes, epoch)
+        // test with only 10 nfnodes for wubi and 10 for wupi. TODO: remove this
+        processWUBIWithConcurrency(totalWubiNFNodes, epoch)
+        processWUPIWithConcurrency(totalWupiNFNodes, epoch)
         return { error: false, epoch: epoch }
     } catch (error) {
         console.error('error processing rewards per epoch', error)
@@ -95,17 +116,15 @@ export const initiateRewardsProcessing = async (poolId?: number):
 
 // process wubi nfnodes with concurrency
 const processWUBIWithConcurrency = async (nfNodes: WubiNFNodes[], poolPerEpoch: PoolPerEpoch) => {
+    let messagesSentCounter = poolPerEpoch?.wubi_messages_sent || 0;
     try {
         console.log(`Processing ${nfNodes.length} WUBI nfnodes with concurrency`);
         const chunks = processInChunks(nfNodes, BATCH_SIZE);
-        let messagesSentCounter = poolPerEpoch?.wubi_messages_sent || 0;
-        let lastUpdateTime = Date.now();
 
         for (const [chunkIndex, chunk] of chunks.entries()) {
             const semaphore = Array(CONCURRENCY_LIMIT).fill(Promise.resolve());
             const errors: Error[] = [];
             let chunkCompletedCount = 0;
-            const currentTime = Date.now();
 
             await Promise.all(
                 chunk.map((nfNode, index) => {
@@ -134,10 +153,8 @@ const processWUBIWithConcurrency = async (nfNodes: WubiNFNodes[], poolPerEpoch: 
                                 chunkCompletedCount++;
 
                                 // Track message progress
-                                const { isLastMessage } = await poolMessageTracker.trackMessage(poolPerEpoch.id, 'wubi');
-
-                                if (isLastMessage) {
-                                    console.log('🌠 Last WUBI item processed successfully');
+                                if (isLastItem) {
+                                    console.log('🌠 Last WUBI item sent successfully');
                                 }
                             });
                         })
@@ -148,15 +165,6 @@ const processWUBIWithConcurrency = async (nfNodes: WubiNFNodes[], poolPerEpoch: 
                 })
             );
 
-            // Update database periodically
-            if ((currentTime - lastUpdateTime) >= POOL_PER_EPOCH_UPDATE_INTERVAL || 
-                (chunkIndex === chunks.length - 1)) {
-                await updatePoolPerEpochById(poolPerEpoch.id, {
-                    wubi_messages_sent: messagesSentCounter
-                });
-                lastUpdateTime = currentTime;
-            }
-
             // Progress log after each chunk
             const processedCount = (chunkIndex + 1) * BATCH_SIZE;
             logProgress(Math.min(processedCount, nfNodes.length), nfNodes.length, 'WUBI');
@@ -166,17 +174,21 @@ const processWUBIWithConcurrency = async (nfNodes: WubiNFNodes[], poolPerEpoch: 
             }
         }
 
+        // refresh the pool message tracker to know the total messages sent for wubi
+        await poolMessageTracker.refreshPool(poolPerEpoch.id, 'wubi', messagesSentCounter)
         // Update status to messages_sent after all messages are sent
         await updatePoolPerEpochById(poolPerEpoch.id, {
             wubi_messages_sent: messagesSentCounter,
             wubi_processing_status: 'messages_sent'
         });
 
+
         console.log('✅ Finished to send all WUBI nfnodes');
     } catch (error) {
         console.error('🚨 Error in WUBI batch processing:', error);
         await updatePoolPerEpochById(poolPerEpoch.id, {
-            wubi_processing_status: 'messages_not_sent',
+            wubi_processing_status: messagesSentCounter === 0 ? 'messages_not_sent' : 'messages_sent',
+            wubi_messages_sent: messagesSentCounter,
             wubi_error_message: error?.toString() as string
         });
         throw error;
@@ -185,6 +197,7 @@ const processWUBIWithConcurrency = async (nfNodes: WubiNFNodes[], poolPerEpoch: 
 
 // process wupi nfnodes with concurrency
 const processWUPIWithConcurrency = async (nfNodes: WupiNFNodes[], epoch: PoolPerEpoch) => {
+    let messagesSentCounter = epoch?.wupi_messages_sent || 0;
     try {
         console.log(`Processing ${nfNodes.length} WUPI nfnodes with concurrency`);
         const epochDate = moment(epoch.epoch).format('YYYY-MM-DD');
@@ -200,14 +213,11 @@ const processWUPIWithConcurrency = async (nfNodes: WupiNFNodes[], epoch: PoolPer
         }
 
         const chunks = processInChunks(nfNodes, BATCH_SIZE);
-        let messagesSentCounter = epoch?.wupi_messages_sent || 0;
-        let lastUpdateTime = Date.now();
 
         for (const [chunkIndex, chunk] of chunks.entries()) {
             const semaphore = Array(CONCURRENCY_LIMIT).fill(Promise.resolve());
             const errors: Error[] = [];
             let chunkCompletedCount = 0;
-            const currentTime = Date.now();
 
             await Promise.all(
                 chunk.map((nfNode, index) => {
@@ -236,10 +246,10 @@ const processWUPIWithConcurrency = async (nfNodes: WupiNFNodes[], epoch: PoolPer
                                 chunkCompletedCount++;
 
                                 // Track message progress
-                                const { isLastMessage } = await poolMessageTracker.trackMessage(epoch.id, 'wupi');
+                                const isLastMessage = (chunkIndex === chunks.length - 1) && (index === chunk.length - 1);
 
                                 if (isLastMessage) {
-                                    console.log('🌠 Last WUPI item processed successfully');
+                                    console.log('🌠 Last WUPI item sent successfully');
                                 }
                             } catch (error) {
                                 console.error(`🚨 Error processing NFNode ${nfNode.id}:`, error);
@@ -253,15 +263,6 @@ const processWUPIWithConcurrency = async (nfNodes: WupiNFNodes[], epoch: PoolPer
                 })
             );
 
-            // Update database periodically
-            if ((currentTime - lastUpdateTime) >= POOL_PER_EPOCH_UPDATE_INTERVAL || 
-                (chunkIndex === chunks.length - 1)) {
-                await updatePoolPerEpochById(epoch.id, {
-                    wupi_messages_sent: messagesSentCounter
-                });
-                lastUpdateTime = currentTime;
-            }
-
             // Progress log after each chunk
             const processedCount = (chunkIndex + 1) * BATCH_SIZE;
             logProgress(Math.min(processedCount, nfNodes.length), nfNodes.length, 'WUPI');
@@ -271,17 +272,21 @@ const processWUPIWithConcurrency = async (nfNodes: WupiNFNodes[], epoch: PoolPer
             }
         }
 
+        // refresh the pool message tracker to know the total messages sent for wupi
+        await poolMessageTracker.refreshPool(epoch.id, 'wupi', messagesSentCounter)
         // Update status to messages_sent after all messages are sent
         await updatePoolPerEpochById(epoch.id, {
             wupi_messages_sent: messagesSentCounter,
             wupi_processing_status: 'messages_sent'
         });
 
+
         console.log('✅ Finished to send all WUPI nfnodes');
     } catch (error) {
         console.error('🚨 Error processing WUPI nfnodes:', error);
         await updatePoolPerEpochById(epoch.id, {
-            wupi_processing_status: 'messages_not_sent',
+            wupi_processing_status: messagesSentCounter === 0 ? 'messages_not_sent' : 'messages_sent',
+            wupi_messages_sent: messagesSentCounter,
             wupi_error_message: error?.toString() as string
         });
         throw error;
