@@ -1,8 +1,8 @@
 import { POOL_PER_EPOCH_RETRY_MAX_ATTEMPTS } from "@constants";
 import { AnalyzePoolStatus, PoolPerEpoch } from "@interfaces/pool-per-epoch";
-import { getActiveWupiNfNodes } from "@services/nfnodes/queries";
+import { getActiveWubiNfNodes, getActiveWupiNfNodes } from "@services/nfnodes/queries";
 import { getPoolToRetry, updatePoolPerEpochById } from "@services/pool-per-epoch/queries"
-import { processWUPIWithConcurrency } from "./rabbit-rewards-messages/initiate-rewards-processing.service";
+import { processWUBIWithConcurrency, processWUPIWithConcurrency } from "./rabbit-rewards-messages/initiate-rewards-processing.service";
 
 /**
  * Process rewards after error
@@ -28,7 +28,14 @@ export const processRewardsAfterError = async () => {
             await retryToSendWupiMessages(pool)
             break
         case 'send_wubi_messages':
-            //await sendWubiMessages(pool)
+            await updatePoolPerEpochById(pool.id, {
+                wubi_retry_count: Number(pool.wubi_retry_count || 0) + 1,
+                is_retrying: true
+            })
+            await retryToSendWubiMessages(pool)
+            break
+        default:
+            console.log('no type found')
             break
     }
 }
@@ -79,8 +86,19 @@ export const analyzePoolStatus = (pool: PoolPerEpoch): AnalyzePoolStatus => {
  * @returns void
  */
 export const retryToSendWupiMessages = async (pool: PoolPerEpoch) => {
-    //await sendWubiMessages(pool)
     const wupiNFNodes = await getActiveWupiNfNodes()
     // process wupi nfnodes with concurrency
     await processWUPIWithConcurrency(wupiNFNodes, pool)
+}
+
+
+/**
+ * Retry to send wubi messages
+ * @param pool - PoolPerEpoch
+ * @returns void
+ */
+export const retryToSendWubiMessages = async (pool: PoolPerEpoch) => {
+    const wubiNFNodes = await getActiveWubiNfNodes()
+    // process wubi nfnodes with concurrency
+    await processWUBIWithConcurrency(wubiNFNodes, pool)
 }

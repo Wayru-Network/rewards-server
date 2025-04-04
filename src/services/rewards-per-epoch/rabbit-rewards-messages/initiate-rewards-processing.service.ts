@@ -1,5 +1,5 @@
 import { BATCH_SIZE, CONCURRENCY_LIMIT, TIME_DELAY } from "@constants";
-import { checkWupiSync } from "@helpers/rewards-per-epoch/rewards-per-epoch.helpers";
+import { checkWubiSync, checkWupiSync } from "@helpers/rewards-per-epoch/rewards-per-epoch.helpers";
 import { logProgress, processInChunks, withRetry } from "@helpers/rewards-per-epoch/rewards-per-epoch.helpers";
 import { WubiNFNodes, WupiNFNodes } from "@interfaces/nfnodes";
 import { getActiveWubiNfNodes, getActiveWupiNfNodes } from "@services/nfnodes/queries";
@@ -50,7 +50,7 @@ export const initiateRewardsProcessing = async (poolId?: number):
         const epochWubiNFNodesTotal = Number(epoch.wubi_nfnodes_total)
         const epochWupiNFNodesTotal = Number(epoch.wupi_nfnodes_total)
         // declare total wubi and wupi nfnodes to send messages
-   
+
         const totalWubiNFNodes = wubiNFNodes //.slice(0, 50)
         const totalWupiNFNodes = wupiNFNodes //.slice(0, 50)
 
@@ -119,8 +119,20 @@ export const processWUBIWithConcurrency = async (nfNodes: WubiNFNodes[], poolPer
     let messagesSentCounter = poolPerEpoch?.wubi_messages_sent || 0;
     try {
         console.log(`Processing ${nfNodes.length} WUBI nfnodes with concurrency`);
-        const chunks = processInChunks(nfNodes, BATCH_SIZE);
+        const epochDate = moment(poolPerEpoch.epoch).format('YYYY-MM-DD');
+        const synced = await checkWubiSync(epochDate);
+        if (!synced) {
+            console.error('🚨 Connections backend is not ready; WUBI rewards will not be processed');
+            await updatePoolPerEpochById(poolPerEpoch.id, {
+                wubi_processing_status: 'messages_not_sent',
+                wubi_error_message: 'check wubi sync is not ready',
+                is_retrying: false
+            });
+            return;
+        }
 
+
+        const chunks = processInChunks(nfNodes, BATCH_SIZE);
         for (const [chunkIndex, chunk] of chunks.entries()) {
             const semaphore = Array(CONCURRENCY_LIMIT).fill(Promise.resolve());
             const errors: Error[] = [];

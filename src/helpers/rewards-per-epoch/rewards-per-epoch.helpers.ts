@@ -14,12 +14,19 @@ export const checkWupiSync = async (epochDate: string): Promise<boolean> => {
         }
 };
 
+export const checkWubiSync = async (epochDate: string): Promise<boolean> => {
+    try {
+        return true; // for the moment we are not checking the wubi sync, because it's not ready yet
+    } catch (error) {
+        console.error(`Sync check attempt failed:`, error);
+        return false;
+    }
+};
 // log the progress of the rewards per epoch
 export const logProgress = (processed: number, total: number, type: 'WUBI' | 'WUPI') => {
     const percentage = ((processed / total) * 100).toFixed(2);
     console.log(`${type} Progress: ${processed}/${total} (${percentage}%)`);
 };
-
 
 // with retry
 export const withRetry = async <T>(
@@ -36,7 +43,6 @@ export const withRetry = async <T>(
         throw error;
     }
 };
-
 
 // process in chunks
 export const processInChunks = <T>(items: T[], chunkSize: number): T[][] => {
