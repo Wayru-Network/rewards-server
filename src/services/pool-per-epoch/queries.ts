@@ -218,3 +218,23 @@ export const getActivePools = async () => {
         return [];
     }
 }
+
+export const getPoolToRetry = async () => {
+    try {
+        const { rows } = await pool.query(`
+            SELECT * FROM ${poolPerEpochTable} 
+            WHERE (
+                wubi_processing_status = 'messages_not_sent' OR 
+                wupi_processing_status = 'messages_not_sent'
+            ) 
+            AND is_retrying = false 
+            ORDER BY id ASC 
+            LIMIT 1
+        `);
+        const poolPerEpoch = rows?.length > 0 ? rows[0] : null;
+        return poolPerEpoch as PoolPerEpoch | null;
+    } catch (error) {
+        console.error('getPoolToRetry error', error);
+        return null;
+    }
+}

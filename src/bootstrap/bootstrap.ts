@@ -21,7 +21,7 @@ export const bootstrap = async () => {
         new NetworkScoreCalculator();
         new PoolProcessTimer();
         await poolMessageTracker.initialize();
-        //TODO: initialize other requires services here
+        //@TODO: initialize other requires services here
         
         console.log('✈️  All services initialized successfully ');
     } catch (error) {

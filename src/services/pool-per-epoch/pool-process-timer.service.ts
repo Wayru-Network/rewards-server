@@ -1,119 +1,151 @@
 import { eventHub } from "@services/events/event-hub";
 import { EventName } from "@interfaces/events";
-import { updatePoolPerEpochById } from "@services/pool-per-epoch/queries";
+import { updatePoolPerEpochById, getPoolPerEpochById } from "@services/pool-per-epoch/queries";
 import { RewardSystemManager } from "@services/solana/reward-system/reward-system.manager";
+import { PoolPerEpoch } from "@interfaces/pool-per-epoch";
 
 export class PoolProcessTimer {
-    private processStartTime: number | null = null;
     private processData: {
         totalWubiNFNodes: number;
         totalWupiNFNodes: number;
         epochId: number;
+        startTime: string;
     } | null = null;
-    private wubiCompleted = false;
-    private wupiCompleted = false;
 
     constructor() {
         this.setupEventListeners();
     }
 
     private setupEventListeners() {
-        eventHub.on(EventName.REWARDS_PROCESS_STARTED, (data) => {
-            this.processStartTime = Date.now();
-            this.processData = data;
-            this.wubiCompleted = false;
-            this.wupiCompleted = false;
-            console.log('🔔 Rewards process started', {
+        eventHub.on(EventName.REWARDS_PROCESS_STARTED, async (data) => {
+            const startTime = new Date().toISOString();
+            this.processData = {
                 ...data,
-                startTime: new Date(this.processStartTime).toISOString()
+                startTime
+            };
+
+            // update the pool per epoch with initial processing metrics
+            const initialMetrics = {
+                epochId: data.epochId,
+                totalWubiNFNodes: data.totalWubiNFNodes,
+                totalWupiNFNodes: data.totalWupiNFNodes,
+                startTime,
+                processingTimeMs: 0,
+                processingTimeFormatted: '0h 0m 0s',
+                status: 'started'  // we could add this field for tracking
+            };
+
+            await updatePoolPerEpochById(this.processData.epochId, {
+                processing_metrics: initialMetrics
+            });
+
+            console.log('🔔 Rewards process started', {
+                ...this.processData,
+                metrics: initialMetrics
             });
         });
 
         eventHub.on(EventName.WUBI_PROCESS_COMPLETED, async () => {
-            if (!this.processStartTime || !this.processData) return;
-            this.wubiCompleted = true;
-
-            const processingTime = Date.now() - this.processStartTime;
-            console.log('🔔 WUBI process completed', {
-                epochId: this.processData.epochId,
-                totalNFNodes: this.processData.totalWubiNFNodes,
-                processingTimeMs: processingTime,
-                processingTimeFormatted: this.formatTime(processingTime),
-                startTime: new Date(this.processStartTime).toISOString(),
-                endTime: new Date().toISOString(),
-                averageTimePerNode: this.processData.totalWubiNFNodes > 0
-                    ? `${(processingTime / this.processData.totalWubiNFNodes).toFixed(2)}ms per nfnode`
-                    : 'N/A'
-            });
-
-            // update the pool per epoch with the processing metrics
-            await updatePoolPerEpochById(this.processData.epochId, {
-                wubi_processing_status: 'messages_processed'
-            });
-
-            this.checkCompletion();
+            if (!this.processData) return;
+            await this.handleProcessCompletion('wubi');
         });
 
         eventHub.on(EventName.WUPI_PROCESS_COMPLETED, async () => {
-            if (!this.processStartTime || !this.processData) return;
-            this.wupiCompleted = true;
-
-            const processingTime = Date.now() - this.processStartTime;
-            console.log('🔔 WUPI process completed', {
-                epochId: this.processData.epochId,
-                totalNFNodes: this.processData.totalWupiNFNodes,
-                processingTimeMs: processingTime,
-                processingTimeFormatted: this.formatTime(processingTime),
-                startTime: new Date(this.processStartTime).toISOString(),
-                endTime: new Date().toISOString(),
-                averageTimePerNode: this.processData.totalWupiNFNodes > 0
-                    ? `${(processingTime / this.processData.totalWupiNFNodes).toFixed(2)}ms per node`
-                    : 'N/A'
-            });
-
-            // update the pool per epoch with the processing metrics
-            await updatePoolPerEpochById(this.processData.epochId, {
-                wupi_processing_status: 'messages_processed'
-            });
-
-            this.checkCompletion();
+            if (!this.processData) return;
+            await this.handleProcessCompletion('wupi');
         });
     }
 
-    private checkCompletion() {
-        if (this.wubiCompleted && this.wupiCompleted && this.processStartTime && this.processData) {
-            const totalTime = Date.now() - this.processStartTime;
+    private async handleProcessCompletion(type: 'wubi' | 'wupi') {
+        if (!this.processData) return;
+
+        const pool = await getPoolPerEpochById(this.processData.epochId);
+        if (!pool) return;
+
+        const processingTime = this.calculateProcessingTime(pool);
+        const totalNodes = type === 'wubi' 
+            ? this.processData.totalWubiNFNodes 
+            : this.processData.totalWupiNFNodes;
+
+        console.log(`🔔 ${type.toUpperCase()} process completed`, {
+            epochId: this.processData.epochId,
+            totalNFNodes: totalNodes,
+            processingTimeMs: processingTime,
+            processingTimeFormatted: this.formatTime(processingTime),
+            startTime: pool.processing_metrics?.startTime || this.processData.startTime,
+            endTime: new Date().toISOString(),
+            averageTimePerNode: totalNodes > 0
+                ? `${(processingTime / totalNodes).toFixed(2)}ms per node`
+                : 'N/A'
+        });
+
+        // update the pool per epoch with the processing metrics
+        const updatedPool = await updatePoolPerEpochById(this.processData.epochId, {
+            [`${type}_processing_status`]: 'messages_processed',
+            [`${type}_messages_received`]: totalNodes,
+        });
+        if (!updatedPool) return;
+
+        await this.checkCompletion(updatedPool);
+    }
+
+    private async checkCompletion(pool: PoolPerEpoch) {
+        const bothCompleted = 
+            pool.wubi_processing_status === 'messages_processed' && 
+            pool.wupi_processing_status === 'messages_processed';
+        const totalNodes = pool.wubi_nfnodes_total + pool.wupi_nfnodes_total;
+
+        if (bothCompleted && this.processData) {
+            const totalTime = this.calculateProcessingTime(pool);
             const result = {
-                epochId: this.processData.epochId,
-                totalWubiNFNodes: this.processData.totalWubiNFNodes,
-                totalWupiNFNodes: this.processData.totalWupiNFNodes,
+                epochId: pool.id,
+                totalWubiNFNodes: pool.wubi_nfnodes_total,
+                totalWupiNFNodes: pool.wupi_nfnodes_total,
                 processingTimeMs: totalTime,
                 processingTimeFormatted: this.formatTime(totalTime),
-                startTime: new Date(this.processStartTime).toISOString(),
-                endTime: new Date().toISOString()
-            }
+                startTime: pool.processing_metrics?.startTime || this.processData.startTime,
+                endTime: new Date().toISOString(),
+                averageTimePerNode: totalNodes > 0
+                    ? `${(totalTime / totalNodes).toFixed(2)}ms per node`
+                    : 'N/A',
+                status: 'completed'
+            };
+
             console.log('🔔 All processes completed', result);
-            updatePoolPerEpochById(this.processData.epochId, {
-                processing_metrics: result
-            });
-            // clean up reward system manager
-            RewardSystemManager.cleanup()
+                await updatePoolPerEpochById(pool.id, {
+                    processing_metrics: result,
+                    is_retrying: pool?.is_retrying  ? false : pool?.is_retrying
+                });
+                // Clean up the reward system manager
+                RewardSystemManager.cleanup();
+
             this.resetProcess();
         }
+    }
+
+    private calculateProcessingTime(pool: PoolPerEpoch): number {
+        // Try to get startTime from the pool first
+        const poolStartTime = pool.processing_metrics?.startTime as string;
+        
+        // If it doesn't exist in the pool, use the state
+        const startTimeToUse = poolStartTime || this.processData?.startTime;
+
+        if (!startTimeToUse) {
+            console.warn(`No start time found for pool ${pool.id}, using current time`);
+            return 0;
+        }
+
+        return Date.now() - new Date(startTimeToUse).getTime();
     }
 
     private formatTime(ms: number): string {
         const seconds = Math.floor(ms / 1000);
         const minutes = Math.floor(seconds / 60);
         const hours = Math.floor(minutes / 60);
-
         return `${hours}h ${minutes % 60}m ${seconds % 60}s`;
     }
 
     private resetProcess() {
-        this.processStartTime = null;
         this.processData = null;
-        this.wubiCompleted = false;
-        this.wupiCompleted = false;
     }
 }

@@ -1,4 +1,4 @@
-import { BATCH_SIZE, CONCURRENCY_LIMIT, POOL_PER_EPOCH_UPDATE_INTERVAL, TIME_DELAY } from "@constants";
+import { BATCH_SIZE, CONCURRENCY_LIMIT, TIME_DELAY } from "@constants";
 import { checkWupiSync } from "@helpers/rewards-per-epoch/rewards-per-epoch.helpers";
 import { logProgress, processInChunks, withRetry } from "@helpers/rewards-per-epoch/rewards-per-epoch.helpers";
 import { WubiNFNodes, WupiNFNodes } from "@interfaces/nfnodes";
@@ -26,7 +26,7 @@ export const initiateRewardsProcessing = async (poolId?: number):
     Promise<{ error: boolean, message?: string, epoch?: PoolPerEpoch }> => {
     try {
         // await 5 seconds to start:
-        // TODO: remove this after testing
+        // @TODO: remove this after testing
         await new Promise(resolve => setTimeout(resolve, 5000));
         // get the start time of the process
         const startTime = Date.now()
@@ -50,7 +50,7 @@ export const initiateRewardsProcessing = async (poolId?: number):
         const epochWubiNFNodesTotal = Number(epoch.wubi_nfnodes_total)
         const epochWupiNFNodesTotal = Number(epoch.wupi_nfnodes_total)
         // declare total wubi and wupi nfnodes to send messages
-        // TODO: remove this after testing, for the moment test with 10 nfnodes
+   
         const totalWubiNFNodes = wubiNFNodes //.slice(0, 50)
         const totalWupiNFNodes = wupiNFNodes //.slice(0, 50)
 
@@ -74,7 +74,7 @@ export const initiateRewardsProcessing = async (poolId?: number):
         // get the epoch number & wayru earned
         const epochNumber = await getPoolPerEpochNumber(epoch.epoch)
         const wayruEarned = Number(getPoolPerEpochAmount(epochNumber)) / 1000000
-        // TODO: we can sum here the wayruEarned into stats table () =>
+        // @TODO: we can sum here the wayruEarned into stats table () =>
         console.log('wayruEarned', wayruEarned)
 
         // if there aren't actives wubi or wupi nodes, we can return
@@ -104,7 +104,7 @@ export const initiateRewardsProcessing = async (poolId?: number):
         poolMessageTracker.registerPool(epoch.id)
 
         // now process the nfnodes and calculate their scores
-        // test with only 10 nfnodes for wubi and 10 for wupi. TODO: remove this
+        // test with only 10 nfnodes for wubi and 10 for wupi. @TODO: remove this
         processWUBIWithConcurrency(totalWubiNFNodes, epoch)
         processWUPIWithConcurrency(totalWupiNFNodes, epoch)
         return { error: false, epoch: epoch }
@@ -115,7 +115,7 @@ export const initiateRewardsProcessing = async (poolId?: number):
 }
 
 // process wubi nfnodes with concurrency
-const processWUBIWithConcurrency = async (nfNodes: WubiNFNodes[], poolPerEpoch: PoolPerEpoch) => {
+export const processWUBIWithConcurrency = async (nfNodes: WubiNFNodes[], poolPerEpoch: PoolPerEpoch) => {
     let messagesSentCounter = poolPerEpoch?.wubi_messages_sent || 0;
     try {
         console.log(`Processing ${nfNodes.length} WUBI nfnodes with concurrency`);
@@ -189,14 +189,15 @@ const processWUBIWithConcurrency = async (nfNodes: WubiNFNodes[], poolPerEpoch: 
         await updatePoolPerEpochById(poolPerEpoch.id, {
             wubi_processing_status: messagesSentCounter === 0 ? 'messages_not_sent' : 'messages_sent',
             wubi_messages_sent: messagesSentCounter,
-            wubi_error_message: error?.toString() as string
+            wubi_error_message: error?.toString() as string,
+            is_retrying: false
         });
         throw error;
     }
 };
 
 // process wupi nfnodes with concurrency
-const processWUPIWithConcurrency = async (nfNodes: WupiNFNodes[], epoch: PoolPerEpoch) => {
+export const processWUPIWithConcurrency = async (nfNodes: WupiNFNodes[], epoch: PoolPerEpoch) => {
     let messagesSentCounter = epoch?.wupi_messages_sent || 0;
     try {
         console.log(`Processing ${nfNodes.length} WUPI nfnodes with concurrency`);
@@ -207,7 +208,8 @@ const processWUPIWithConcurrency = async (nfNodes: WupiNFNodes[], epoch: PoolPer
             console.error('🚨 Connections backend is not ready; WUPI rewards will not be processed');
             await updatePoolPerEpochById(epoch.id, {
                 wupi_processing_status: 'messages_not_sent',
-                wupi_error_message: 'check wupi sync is not ready'
+                wupi_error_message: 'check wupi sync is not ready',
+                is_retrying: false
             });
             return;
         }
@@ -280,14 +282,14 @@ const processWUPIWithConcurrency = async (nfNodes: WupiNFNodes[], epoch: PoolPer
             wupi_processing_status: 'messages_sent'
         });
 
-
         console.log('✅ Finished to send all WUPI nfnodes');
     } catch (error) {
         console.error('🚨 Error processing WUPI nfnodes:', error);
         await updatePoolPerEpochById(epoch.id, {
             wupi_processing_status: messagesSentCounter === 0 ? 'messages_not_sent' : 'messages_sent',
             wupi_messages_sent: messagesSentCounter,
-            wupi_error_message: error?.toString() as string
+            wupi_error_message: error?.toString() as string,
+            is_retrying: false
         });
         throw error;
     }

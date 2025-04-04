@@ -1,23 +1,17 @@
-import { ERROR_DELAY, MAX_RETRIES, WUPI_SYNC_ATTEMPTS } from "@constants";
-import { WUPI_DELAY_MINUTES } from "@constants";
+import { ERROR_DELAY, MAX_RETRIES } from "@constants";
 import { checkSync } from "@services/nas/nas.service";
 
 // check if the wupi backend is ready to receive the messages
 export const checkWupiSync = async (epochDate: string): Promise<boolean> => {
-    for (let i = 0; i < WUPI_SYNC_ATTEMPTS; i++) {
         try {
             const { ready } = await checkSync(epochDate);
             if (ready) return true;
             
-            console.warn(`Attempt ${i + 1}/${WUPI_SYNC_ATTEMPTS}: Backend not ready`);
-            await new Promise(resolve => 
-                setTimeout(resolve, WUPI_DELAY_MINUTES * 60 * 1000)
-            );
+            return false;
         } catch (error) {
-            console.error(`Sync check attempt ${i + 1} failed:`, error);
+            console.error(`Sync check attempt failed:`, error);
+            return false;
         }
-    }
-    return false;
 };
 
 // log the progress of the rewards per epoch

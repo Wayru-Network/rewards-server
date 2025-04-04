@@ -23,6 +23,9 @@ export interface PoolPerEpoch {
     wupi_messages_sent: number,
     wubi_error_message?: string,
     wupi_error_message?: string,
+    wubi_retry_count?: number,
+    wupi_retry_count?: number,
+    is_retrying?: boolean,
 }
 
 
@@ -43,4 +46,10 @@ export type BatchProgress = {
     total: number;
     percentage: number;
     isLastMessage: boolean;
+}
+
+
+export interface AnalyzePoolStatus {
+    needsRetry: boolean,
+    type?: 'send_wupi_messages' | 'send_wubi_messages' | 'send_wupi_rewards' | 'send_wubi_rewards'
 }

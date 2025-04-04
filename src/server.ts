@@ -37,5 +37,5 @@ bootstrap().catch(err => {
   process.exit(1);
 })
 .then(() => {
-  initiateRewardsProcessing(1) // TODO: remove this after testing
+  initiateRewardsProcessing(1) // @TODO: remove this after testing
 })
