@@ -13,7 +13,7 @@ export const initializeRabbitConsumers = async () => {
         await rabbitWrapper.consumeResponse(async (msg: ConsumeMessage) => {
             processWupiRabbitResponse(msg);
         }, ENV.RABBIT_QUEUES.WUPI_API_QUEUE);
-        // TODO: add other consumers here ⬇️
+        // @TODO: add other consumers here ⬇️
         console.log('🐇 RabbitMQ consumers initialized');
     } catch (error) {
         console.error('🚨 Failed to initialize RabbitMQ consumers:', error);

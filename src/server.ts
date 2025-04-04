@@ -4,8 +4,9 @@ import logger from "koa-logger";
 import { errorHandler } from "./middlewares/auth-validator";
 import { dbErrorHandler } from "@middlewares/db-error-handler";
 import { ENV } from "@config/env/env";
-import { bootstrap } from "@bootstrap";
+import { bootstrap } from "@bootstrap/bootstrap";
 import { shutdown } from "@bootstrap/shutdown";
+
 
 // start server app and services
 const app = new Koa();
@@ -34,4 +35,4 @@ bootstrap().catch(err => {
   console.error('🚨 Failed to start services:', err);
   shutdown(); // shutdown all services if error
   process.exit(1);
-});
+})

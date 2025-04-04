@@ -27,5 +27,6 @@ export type ENV_CONFIG = {
   SOLANA_API_URL: string,
   SOLANA_PRIVATE_KEY: string,
   REWARDS_MODE: 'production' | 'test',
+  ENABLE_ERROR_SIMULATION: boolean,
 };
 

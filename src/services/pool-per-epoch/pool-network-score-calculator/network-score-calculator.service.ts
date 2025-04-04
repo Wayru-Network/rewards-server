@@ -2,7 +2,7 @@ import pool from "@config/db";
 import { EventMap } from "@interfaces/events";
 import { EventName } from "@interfaces/events";
 import { eventHub } from "@services/events/event-hub";
-import { updatePoolNetworkScore } from "../queries";
+import { updatePoolNetworkScore, updatePoolPerEpochById } from "../queries";
 import { processRewardsBatch } from "@services/rewards-per-epoch/queries";
 import { BATCH_SIZE_REWARDS } from "@constants";
 import { getPoolPerEpochAmounts } from "../pool-per-epoch.service";
@@ -82,7 +82,8 @@ export class NetworkScoreCalculator {
         }
     }
 
-    private async handleNetworkScoreCalculated({ epochId, networkScore, type }: EventMap[EventName.NETWORK_SCORE_CALCULATED]) {
+    private async handleNetworkScoreCalculated({ epochId, networkScore, type }: 
+        EventMap[EventName.NETWORK_SCORE_CALCULATED]) {
         const client = await pool.connect();
         try {
             await client.query('BEGIN');
@@ -126,9 +127,15 @@ export class NetworkScoreCalculator {
                 });
             }
 
+            // update the pool per epoch
+            await updatePoolPerEpochById(epochId, {
+                [`${type}_nfnodes_with_score`]: rewards.length,
+            });
+
             await client.query('COMMIT');
 
             // emit event that the rewards process has completed
+            // you can continue checking the logic into pool-process-timer.service.ts
             if (type === 'wUBI') {
                 eventHub.emit(EventName.WUBI_PROCESS_COMPLETED, {
                     epochId,
