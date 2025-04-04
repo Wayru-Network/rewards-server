@@ -6,3 +6,4 @@ coverage/
 *.tmp
 *.tmp.*
 *.log.*
+*secrets.yaml
