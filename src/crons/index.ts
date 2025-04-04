@@ -4,7 +4,7 @@ import { processRewardsAfterError } from '@services/rewards-per-epoch/rewards-pe
 
 export const initializeCronJobs = () => {
     cron.schedule('0 0 * * *', () => {
-        //initiateRewardsProcessing()
+        initiateRewardsProcessing()
     });
     // process rewards after error every 2 minutes
     cron.schedule('*/2 * * * *', () => {
