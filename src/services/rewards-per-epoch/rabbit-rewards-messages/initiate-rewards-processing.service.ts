@@ -25,10 +25,6 @@ import moment from 'moment'
 export const initiateRewardsProcessing = async (poolId?: number):
     Promise<{ error: boolean, message?: string, epoch?: PoolPerEpoch }> => {
     try {
-        // await 5 seconds to start:
-        // @TODO: remove this after testing
-        await new Promise(resolve => setTimeout(resolve, 5000));
-        // get the start time of the process
         const startTime = Date.now()
 
         let [wubiNFNodes, wupiNFNodes] = await Promise.all([
@@ -104,7 +100,6 @@ export const initiateRewardsProcessing = async (poolId?: number):
         poolMessageTracker.registerPool(epoch.id)
 
         // now process the nfnodes and calculate their scores
-        // test with only 10 nfnodes for wubi and 10 for wupi. @TODO: remove this
         processWUBIWithConcurrency(totalWubiNFNodes, epoch)
         processWUPIWithConcurrency(totalWupiNFNodes, epoch)
         return { error: false, epoch: epoch }

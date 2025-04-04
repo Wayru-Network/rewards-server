@@ -12,12 +12,9 @@ import { processWUBIWithConcurrency, processWUPIWithConcurrency } from "./rabbit
 export const processRewardsAfterError = async () => {
     const pool = await getPoolToRetry()
     if (!pool) return
-    console.log('pool to retry', pool)
 
     const { needsRetry, type } = analyzePoolStatus(pool)
     if (!needsRetry) return
-    console.log('needsRetry', needsRetry)
-    console.log('type', type)
 
     switch (type) {
         case 'send_wupi_messages':

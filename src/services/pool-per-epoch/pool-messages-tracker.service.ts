@@ -12,8 +12,7 @@ export class PoolMessageTracker {
         wupi: { received: number; }
     }> = new Map();
 
-    private LOG_FREQUENCY = 25;
-    private lastUpdateTime: Map<string, number> = new Map();
+    private LOG_FREQUENCY = 50;
     private isInitialized = false;
 
     constructor() {
@@ -186,12 +185,6 @@ export class PoolMessageTracker {
     private async getActivePools(): Promise<PoolPerEpoch[]> {
         const activePools = await getActivePoolsQuery();
         return activePools;
-    }
-
-    private async updatePoolStatus(poolId: number, type: 'wubi' | 'wupi', status: string) {
-        await updatePoolPerEpochById(poolId, {
-            [`${type}_processing_status`]: status
-        });
     }
 
     async refreshPool(poolId: number, type: 'wubi' | 'wupi', totalMessagesSent: number): Promise<void> {
