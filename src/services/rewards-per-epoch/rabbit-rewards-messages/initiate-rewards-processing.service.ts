@@ -47,8 +47,8 @@ export const initiateRewardsProcessing = async (poolId?: number):
         const epochWupiNFNodesTotal = Number(epoch.wupi_nfnodes_total)
         // declare total wubi and wupi nfnodes to send messages
 
-        const totalWubiNFNodes = wubiNFNodes //.slice(0, 50)
-        const totalWupiNFNodes = wupiNFNodes //.slice(0, 50)
+        const totalWubiNFNodes = wubiNFNodes //.slice(0, 10)
+        const totalWupiNFNodes = wupiNFNodes //.slice(0, 10)
 
         // if the wubi_nfnodes_total or wupi_nfnodes_total is different from the total of nfnodes, we need to update the pool per epoch
         if (totalWubiNFNodes.length !== epochWubiNFNodesTotal || totalWupiNFNodes.length !== epochWupiNFNodesTotal) {
@@ -141,14 +141,20 @@ export const processWUBIWithConcurrency = async (nfNodes: WubiNFNodes[], poolPer
                             await new Promise(resolve => setTimeout(resolve, TIME_DELAY));
                             return withRetry(async () => {
                                 const isLastItem = (chunkIndex === chunks.length - 1) && (index === chunk.length - 1);
+                                const message = {
+                                    wayru_device_id: nfNode.wayru_device_id,
+                                    timestamp: moment(poolPerEpoch.epoch).unix(),
+                                    epoch_id: poolPerEpoch.id,
+                                    last_item: isLastItem
+                                }
+                                // validate the message params
+                                if (!message.wayru_device_id || !message.timestamp ||
+                                    !message.epoch_id || typeof message.last_item !== 'boolean') {
+                                    console.error('sending invalid WUBI message');
+                                    throw new Error('invalid WUBI message');
+                                }
 
-                                const sentResult = await rabbitWrapper.sendMessage(
-                                    {
-                                        wayru_device_id: nfNode.wayru_device_id,
-                                        timestamp: moment(poolPerEpoch.epoch).unix(),
-                                        epoch_id: poolPerEpoch.id,
-                                        last_item: isLastItem
-                                    },
+                                const sentResult = await rabbitWrapper.sendMessage(message,
                                     ENV.RABBIT_QUEUES.WUBI_API_QUEUE
                                 );
 
@@ -236,14 +242,20 @@ export const processWUPIWithConcurrency = async (nfNodes: WupiNFNodes[], epoch: 
                             try {
                                 await new Promise((resolve) => setTimeout(resolve, TIME_DELAY));
                                 const epochDate = moment(epoch.epoch).format('YYYY-MM-DD');
+                                const message = {
+                                    nas_id: nfNode.mac,
+                                    nfnode_id: nfNode.id,
+                                    total_valid_nas: nfNodes?.length,
+                                    epoch: epochDate as unknown as Date
+                                }
+                                // validate the message params
+                                if (!message.nas_id || !message.nfnode_id || !message.epoch
+                                    || typeof message.total_valid_nas !== 'number') {
+                                    console.error('sending invalid WUPI message');
+                                    throw new Error('invalid WUPI message');
+                                }
 
-                                const sentResult = await rabbitWrapper.sendMessage(
-                                    {
-                                        nas_id: nfNode.mac,
-                                        nfnode_id: nfNode.id,
-                                        total_valid_nas: nfNodes?.length,
-                                        epoch: epochDate as unknown as Date
-                                    },
+                                const sentResult = await rabbitWrapper.sendMessage(message,
                                     ENV.RABBIT_QUEUES.WUPI_API_QUEUE
                                 );
 

@@ -4,12 +4,17 @@ import { PoolPerEpoch, PoolPerEpochEntry, UpdatePoolNetworkScoreResponse } from 
 import { RewardPerEpochEntry } from "@interfaces/rewards-per-epoch";
 import { getPoolPerEpochAmounts } from "./pool-per-epoch.service";
 import moment from "moment";
-import { poolPerEpochTable, selectRewardsByPoolPerEpochIdQuery } from "./helpers";
+import { poolPerEpochTable, queryCountRewardsPerEpochByPoolId, selectRewardsByPoolPerEpochIdQuery } from "./helpers";
 
 export const getPoolPerEpochById = async (epochId: number): Promise<PoolPerEpoch | null> => {
     try {
         const result = await pool.query(`SELECT * FROM ${poolPerEpochTable} WHERE id = $1`, [epochId]);
-        const document = result?.rows?.length > 0 ? result.rows[0] : null;
+        let document = result?.rows?.length > 0 ? result.rows[0] : null;
+        if (document) {
+            const rewardsCount = await countRewardsPerEpochByPoolId(document.id)
+            document.wubi_messages_received = Number(rewardsCount?.wubi ?? 0)
+            document.wupi_messages_received = Number(rewardsCount?.wupi ?? 0)
+        }
         return document;
     } catch (error) {
         console.error('getPoolPerEpoch error', error);
@@ -211,8 +216,35 @@ export const getActivePools = async () => {
              wupi_processing_status = 'messages_sent' OR 
              wubi_processing_status = 'messages_not_sent' OR 
              wupi_processing_status = 'messages_not_sent'
-             `)
-        return rows as PoolPerEpoch[]
+             `) as {
+            rows: PoolPerEpoch[]
+        }
+        const pools = rows?.length > 0 ? rows : []
+
+        // verify if the messages received are correct
+        for (const pool of pools) {         
+               const rewardsCount = await countRewardsPerEpochByPoolId(pool.id)
+
+            const wubi_messages_received = Number(pool.wubi_messages_received ?? 0)
+            const wupi_messages_received = Number(pool.wupi_messages_received ?? 0)
+            const wubi_rewards_created = Number(rewardsCount?.wubi ?? 0)
+            const wupi_rewards_created = Number(rewardsCount?.wupi ?? 0)
+
+            // if the are different, we need to update the pool
+            if (wubi_rewards_created !== wubi_messages_received || wupi_rewards_created !== wupi_messages_received) {
+                pool.wubi_messages_received = wubi_rewards_created
+                pool.wupi_messages_received = wupi_rewards_created
+                await updatePoolPerEpochById(pool.id, {
+                    wubi_messages_received: wubi_rewards_created,
+                    wupi_messages_received: wupi_rewards_created
+                })
+            }
+
+            // update the pool, so we do not need to fetch it again
+            pool.wubi_messages_received = wubi_rewards_created
+            pool.wupi_messages_received = wupi_rewards_created
+        }
+        return pools
     } catch (error) {
         console.error('getActivePools error', error);
         return [];
@@ -236,5 +268,29 @@ export const getPoolToRetry = async () => {
     } catch (error) {
         console.error('getPoolToRetry error', error);
         return null;
+    }
+}
+
+export const countRewardsPerEpochByPoolId = async (poolId: number): Promise<{ wubi: number, wupi: number }> => {
+    try {
+        const { rows } = await pool.query(queryCountRewardsPerEpochByPoolId(poolId) as string)
+        const docs = rows?.length > 0 ? rows : null
+        if (!docs) {
+            return {
+                wubi: 0,
+                wupi: 0
+            }
+        }
+        return {
+            wubi: docs?.find(doc => doc.type === 'wUBI')?.total_rewards ?? 0,
+            wupi: docs?.find(doc => doc.type === 'wUPI')?.total_rewards ?? 0
+        }
+
+    } catch (error) {
+        console.error('countRewardsPerEpochByPoolId error', error);
+        return {
+            wubi: 0,
+            wupi: 0
+        }
     }
 }
