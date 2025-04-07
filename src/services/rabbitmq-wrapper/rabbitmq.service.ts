@@ -148,7 +148,7 @@ class RabbitWrapper {
             await this.channel.addSetup(async (channel: Channel) => {
                 await channel.prefetch(queueChannel.options?.prefetch || 5);
                 return channel.consume(
-                    queueChannel.replyTo, // Use the response queue
+                    queueChannel.replyTo,
                     async (msg) => {
                         if (msg) {
                             try {
@@ -170,6 +170,31 @@ class RabbitWrapper {
             throw error;
         }
     }
+
+    /**
+     * Close the connection with RabbitMQ in a clean way
+        */
+        public async close(): Promise<void> {
+        try {
+            console.log('🔌 Closing connection with RabbitMQ...');
+            
+            // Close the channel if it exists
+            if (this.channel) {
+                await this.channel.close();
+                console.log('✅ Channel closed correctly');
+            }
+            
+            // Close the connection if it exists
+            if (this.connection) {
+                await this.connection.close();
+                console.log('✅ Connection closed correctly');
+            }
+            
+            console.log('👋 Connection with RabbitMQ closed correctly');
+        } catch (error) {
+            console.error('❌ Error closing the connection with RabbitMQ:', error);
+        }
+    }
 }
 
 // Usage of the service
@@ -183,11 +208,12 @@ export const initializeRabbitMQ = async () => {
             name: ENV.RABBIT_QUEUES.WUBI_API_QUEUE,
             replyTo: ENV.RABBIT_QUEUES.WUBI_API_QUEUE_RESPONSE,
             processor: async (msg) => {
-                processWubiRabbitResponse(msg);
+                return await processWubiRabbitResponse(msg);
             },
             options: {
                 durable: true,
-                prefetch: 5
+                prefetch: 5,
+                noAck: false
             }
         });
 
@@ -195,7 +221,12 @@ export const initializeRabbitMQ = async () => {
             name: ENV.RABBIT_QUEUES.WUPI_API_QUEUE,
             replyTo: ENV.RABBIT_QUEUES.WUPI_API_QUEUE_RESPONSE,
             processor: async (msg) => {
-                processWupiRabbitResponse(msg);
+               return await processWupiRabbitResponse(msg);
+            },
+            options: {
+                durable: true,
+                prefetch: 5,
+                noAck: false
             }
         });
 

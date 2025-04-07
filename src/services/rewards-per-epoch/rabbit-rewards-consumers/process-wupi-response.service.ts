@@ -14,7 +14,7 @@ export const processWupiRabbitResponse = async (msg: ConsumeMessage) => {
 
         if (!nas_id || !nfnode_id || !epoch || typeof total_valid_nas !== 'number') {
             console.error('invalid WUPI message');
-            return;
+            throw new Error('invalid WUPI message'); // throw error to be handled by the wrapper
         }
 
         // Get instance of reward system program
@@ -31,14 +31,14 @@ export const processWupiRabbitResponse = async (msg: ConsumeMessage) => {
 
         if (!epochDocument) {
             console.error('epoch not found');
-            return;
+            throw new Error('epoch not found'); // throw error to be handled by the wrapper
         }
 
         // Calculate score
         const scoreInGb = Number(BigInt(score)) / 1000000000;
 
         // Create rewards
-        const rewards = await createRewardsPerEpoch({
+        const reward = await createRewardsPerEpoch({
             hotspot_score: Number((scoreInGb > 0 ? scoreInGb * multiplier : 0).toFixed(6)),
             nfnode: nfnode_id,
             pool_per_epoch: epochDocument.id,
@@ -50,13 +50,13 @@ export const processWupiRabbitResponse = async (msg: ConsumeMessage) => {
             host_payment_status: 'pending',
         });
 
-        if (!rewards) {
+        if (!reward) {
             console.error('error creating rewards per epoch');
-            return;
+            throw new Error('error creating rewards per epoch'); // throw error to be handled by the wrapper
         }
 
         // Track message
-        const { isLastMessage } = await poolMessageTracker.trackMessage(epochDocument.id, 'wupi');
+        const { isLastMessage } = await poolMessageTracker.trackMessage(epochDocument.id, 'wupi', reward.id);
 
         // update the pool per epoch
        if (isLastMessage) {
@@ -67,6 +67,6 @@ export const processWupiRabbitResponse = async (msg: ConsumeMessage) => {
         }
     } catch (error) {
         console.error('🚨 Error processing WUPI rabbit response:', error);
-        return;
+        throw error; // throw error to be handled by the wrapper
     }
 };

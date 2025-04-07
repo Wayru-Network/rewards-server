@@ -14,13 +14,13 @@ export const bootstrap = async () => {
         console.log('🛫 Starting services initialization...');
 
         // Initialize services in sequence (or parallel if possible)
-        await initializeRabbitMQ();
         startEventHub();
-        initializeCronJobs();
+        await poolMessageTracker.initialize();
+        await initializeRabbitMQ();
         await initializeRabbitConsumers();
         new NetworkScoreCalculator();
         new PoolProcessTimer();
-        await poolMessageTracker.initialize();
+        initializeCronJobs();
         //@TODO: initialize other requires services here
         
         console.log('✈️  All services initialized successfully ');

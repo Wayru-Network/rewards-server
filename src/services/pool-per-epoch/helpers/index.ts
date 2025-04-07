@@ -40,3 +40,41 @@ export const selectRewardsByPoolPerEpochIdQuery = (poolPerEpochId: number, type:
             throw new Error('Invalid rewards mode')
     }
 }
+
+export const queryCountRewardsPerEpochByPoolId = (poolId: number) => {
+    try {
+        switch (ENV.REWARDS_MODE) {
+            case 'production':
+                return `
+                     SELECT 
+                        rpe.type,
+                        COUNT(*) as total_rewards
+                    FROM rewards_per_epoches rpe
+                    INNER JOIN rewards_per_epoches_pool_per_epoch_links link 
+                        ON rpe.id = link.rewards_per_epoch_id
+                    INNER JOIN pool_per_epochs ppe 
+                        ON link.pool_per_epoch_id = ppe.id
+                WHERE ppe.id = ${poolId}
+                GROUP BY 
+                    rpe.type`
+            case 'test':
+                return `
+                    SELECT 
+                        rpe.type,
+                        COUNT(*) as total_rewards
+                    FROM rewards_per_epoch_tests rpe
+                INNER JOIN rewards_per_epoch_tests_pool_per_epoch_test_links link 
+                    ON rpe.id = link.rewards_per_epoch_test_id
+                INNER JOIN pool_per_epoch_tests ppe 
+                    ON link.pool_per_epoch_test_id = ppe.id
+                WHERE ppe.id = ${poolId}
+                GROUP BY 
+                    rpe.type`
+            default:
+                throw new Error('Invalid rewards mode')
+        }
+    } catch (error) {
+        console.error('countRewardsPerEpochByPoolId error', error);
+        return null;
+    }
+}

@@ -1,4 +1,3 @@
-import { POOL_PER_EPOCH_UPDATE_INTERVAL } from "@constants";
 import { BatchProgress, PoolPerEpoch } from "@interfaces/pool-per-epoch";
 import { getActivePools as getActivePoolsQuery, getPoolPerEpochById, updatePoolPerEpochById } from "@services/pool-per-epoch/queries";
 
@@ -11,6 +10,9 @@ export class PoolMessageTracker {
         wubi: { received: number; },
         wupi: { received: number; }
     }> = new Map();
+
+    // Set to keep track of processed rewards
+    private processedRewardIds = new Set<number>();
 
     private LOG_FREQUENCY = 50;
     private isInitialized = false;
@@ -62,9 +64,27 @@ export class PoolMessageTracker {
     }
 
     private initializeCounters(poolId: string) {
+        const pool = this.pools.get(poolId);
+        if (!pool) {
+            throw new Error(`Cannot initialize counters for pool ${poolId}: Pool not found`);
+        }
+
+        // Initialize counters based on DB values only if they exist
+        const wubiReceived = pool.wubi_messages_received !== null ? Number(pool.wubi_messages_received) : 0;
+        const wupiReceived = pool.wupi_messages_received !== null ? Number(pool.wupi_messages_received) : 0;
+
         this.messageCounters.set(poolId, {
-            wubi: { received: 0 },
-            wupi: { received: 0 }
+            wubi: { received: wubiReceived },
+            wupi: { received: wupiReceived }
+        });
+
+        console.log(`Counters initialized for pool ${poolId}:`, {
+            wubi_received: wubiReceived,
+            wupi_received: wupiReceived,
+            from_database: {
+                wubi: pool.wubi_messages_received !== null,
+                wupi: pool.wupi_messages_received !== null
+            }
         });
     }
 
@@ -78,13 +98,13 @@ export class PoolMessageTracker {
     }
 
     /**
-     * Track message progress, increase the counter and update the database
-     * periodically each time the method is called
+     * Track message progress with idempotency using rewardId
      * @param poolId - The ID of the pool
      * @param type - The type of message to track ('wubi' or 'wupi')
+     * @param rewardId - The ID of the created reward for idempotency check
      * @returns A promise that resolves to the batch progress
      */
-    async trackMessage(poolId: number, type: 'wubi' | 'wupi'): Promise<BatchProgress> {
+    async trackMessage(poolId: number, type: 'wubi' | 'wupi', rewardId: number): Promise<BatchProgress> {
         const poolIdStr = poolId.toString();
         
         const pool = this.pools.get(poolIdStr);
@@ -97,10 +117,31 @@ export class PoolMessageTracker {
             throw new Error(`Counters not found for pool ${poolId}`);
         }
 
-        // Increment counter
+        // Check if we have already processed this reward
+        if (this.processedRewardIds.has(rewardId)) {
+            console.log(`⚠️ Duplicate message detected: reward ${rewardId} already processed`);
+            
+            // Return the current progress without incrementing
+            const received = counters[type].received;
+            const expected = type === 'wubi' 
+                ? Number(pool.wubi_messages_sent || pool.wubi_nfnodes_total) 
+                : Number(pool.wupi_messages_sent || pool.wupi_nfnodes_total);
+                
+            return {
+                current: received,
+                total: expected,
+                percentage: expected > 0 ? (received / expected) * 100 : 0,
+                isLastMessage: received === expected
+            };
+        }
+        
+        // Mark as processed
+        this.processedRewardIds.add(rewardId);
+
+        // Increment counter (only for new rewards)
         counters[type].received++;
 
-        // Ensure all values are numbers
+        // The rest of the code continues as usual...
         const received = counters[type].received;
         const expected = type === 'wubi' 
             ? Number(pool.wubi_messages_sent || pool.wubi_nfnodes_total) 
@@ -117,10 +158,6 @@ export class PoolMessageTracker {
             isLastMessage || 
             (received === Math.floor(expected / 2))) {
             console.log(`📊 Progress for ${type} poolId: ${poolId} - ${received}/${expected} (${(expected > 0 ? (received / expected) * 100 : 0).toFixed(2)}%)`);
-            // update the pool per epoch with the current message counter
-            await updatePoolPerEpochById(poolId, {
-                [`${type}_messages_received`]: received
-            });
         }
 
         if (isLastMessage) {
@@ -179,6 +216,8 @@ export class PoolMessageTracker {
     // method to clear the cache of a specific pool
     clearCache(poolId: string) {
         this.pools.delete(poolId);
+        this.messageCounters.delete(poolId);
+        console.log(`✅ Cache cleared for pool ${poolId}`);
     }
 
     // method to get active pools (implement according to your logic)

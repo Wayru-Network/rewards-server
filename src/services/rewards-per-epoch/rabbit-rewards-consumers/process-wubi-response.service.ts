@@ -15,7 +15,7 @@ export const processWubiRabbitResponse = async (msg: ConsumeMessage) => {
         // Validation of the message
         if (typeof hotspot_score !== 'number' || !wayru_device_id || !epoch_id || typeof last_item !== 'boolean') {
             console.error('invalid Wubi message');
-            return;
+            throw new Error('invalid Wubi message'); // throw error to be handled by the wrapper
         }
 
         // Get instance of RewardSystem
@@ -28,8 +28,7 @@ export const processWubiRabbitResponse = async (msg: ConsumeMessage) => {
         const multiplier = isEligible ? getNfNodeMultiplier(nfnode) : 0;
 
         // Create rewards
-        const beforeRewards = Date.now();
-        const rewards = await createRewardsPerEpoch({
+        const reward = await createRewardsPerEpoch({
             hotspot_score: hotspot_score * multiplier,
             nfnode: nfnode.id,
             pool_per_epoch: epoch_id,
@@ -41,16 +40,20 @@ export const processWubiRabbitResponse = async (msg: ConsumeMessage) => {
             host_payment_status: 'pending',
         });
 
-        if (!rewards) {
+        if (!reward) {
             console.error('error creating rewards per epoch');
-            return;
+            throw new Error('error creating rewards per epoch');
         }
 
-        // Track message
-        const { isLastMessage } = await poolMessageTracker.trackMessage(epoch_id, 'wubi');
+        // Track message con el ID del reward
+        const { isLastMessage } = await poolMessageTracker.trackMessage(
+            epoch_id, 
+            'wubi',
+            reward.id
+        );
 
         // update the pool per epoch
-     if (isLastMessage) {
+        if (isLastMessage) {
             eventHub.emit(EventName.LAST_REWARD_CREATED, {
                 epochId: epoch_id,
                 type: 'wUBI'
@@ -59,6 +62,6 @@ export const processWubiRabbitResponse = async (msg: ConsumeMessage) => {
 
     } catch (error) {
         console.error('🚨 error processing WUBI rabbit response', error);
-        return;
+        throw error; // Re-throw the error to be handled by the wrapper
     }
 };
