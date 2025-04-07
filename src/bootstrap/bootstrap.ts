@@ -3,7 +3,8 @@ import { initializeRabbitConsumers } from '@services/rabbitmq-wrapper/rabbitmq-c
 import { startEventHub } from '@services/events/event-hub';
 import { initializeCronJobs } from '@crons/index';
 import { NetworkScoreCalculator } from '@services/pool-per-epoch/pool-network-score-calculator/network-score-calculator.service';
-import { TimerService } from '@services/events/timer-service/timer.service';
+import { PoolProcessTimer } from '@services/pool-per-epoch/pool-process-timer.service';
+import { poolMessageTracker } from '@services/pool-per-epoch/pool-messages-tracker.service';
 
 /**
  * Initialize all services
@@ -13,14 +14,14 @@ export const bootstrap = async () => {
         console.log('🛫 Starting services initialization...');
 
         // Initialize services in sequence (or parallel if possible)
-        await initializeRabbitMQ();
         startEventHub();
-        initializeCronJobs();
+        await poolMessageTracker.initialize();
+        await initializeRabbitMQ();
         await initializeRabbitConsumers();
         new NetworkScoreCalculator();
-        new TimerService();
-
-        //TODO: initialize other requires services here
+        new PoolProcessTimer();
+        initializeCronJobs();
+        //@TODO: initialize other requires services here
         
         console.log('✈️  All services initialized successfully ');
     } catch (error) {

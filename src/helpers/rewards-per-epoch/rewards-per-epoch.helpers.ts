@@ -1,31 +1,32 @@
-import { ERROR_DELAY, MAX_RETRIES, WUPI_SYNC_ATTEMPTS } from "@constants";
-import { WUPI_DELAY_MINUTES } from "@constants";
+import { ERROR_DELAY, MAX_RETRIES } from "@constants";
 import { checkSync } from "@services/nas/nas.service";
 
 // check if the wupi backend is ready to receive the messages
 export const checkWupiSync = async (epochDate: string): Promise<boolean> => {
-    for (let i = 0; i < WUPI_SYNC_ATTEMPTS; i++) {
         try {
             const { ready } = await checkSync(epochDate);
             if (ready) return true;
             
-            console.warn(`Attempt ${i + 1}/${WUPI_SYNC_ATTEMPTS}: Backend not ready`);
-            await new Promise(resolve => 
-                setTimeout(resolve, WUPI_DELAY_MINUTES * 60 * 1000)
-            );
+            return false;
         } catch (error) {
-            console.error(`Sync check attempt ${i + 1} failed:`, error);
+            console.error(`Sync check attempt failed:`, error);
+            return false;
         }
-    }
-    return false;
 };
 
+export const checkWubiSync = async (epochDate: string): Promise<boolean> => {
+    try {
+        return true; // for the moment we are not checking the wubi sync, because it's not ready yet
+    } catch (error) {
+        console.error(`Sync check attempt failed:`, error);
+        return false;
+    }
+};
 // log the progress of the rewards per epoch
 export const logProgress = (processed: number, total: number, type: 'WUBI' | 'WUPI') => {
     const percentage = ((processed / total) * 100).toFixed(2);
     console.log(`${type} Progress: ${processed}/${total} (${percentage}%)`);
 };
-
 
 // with retry
 export const withRetry = async <T>(
@@ -42,7 +43,6 @@ export const withRetry = async <T>(
         throw error;
     }
 };
-
 
 // process in chunks
 export const processInChunks = <T>(items: T[], chunkSize: number): T[][] => {

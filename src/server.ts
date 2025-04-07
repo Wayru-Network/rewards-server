@@ -4,8 +4,10 @@ import logger from "koa-logger";
 import { errorHandler } from "./middlewares/auth-validator";
 import { dbErrorHandler } from "@middlewares/db-error-handler";
 import { ENV } from "@config/env/env";
-import { bootstrap } from "@bootstrap";
+import { bootstrap } from "@bootstrap/bootstrap";
 import { shutdown } from "@bootstrap/shutdown";
+import { initiateRewardsProcessing } from "@services/rewards-per-epoch/rabbit-rewards-messages/initiate-rewards-processing.service";
+
 
 // start server app and services
 const app = new Koa();
@@ -34,4 +36,9 @@ bootstrap().catch(err => {
   console.error('🚨 Failed to start services:', err);
   shutdown(); // shutdown all services if error
   process.exit(1);
-});
+})
+.then(async () => {
+  // sleep for 5 seconds before starting the rewards processing
+  await new Promise(resolve => setTimeout(resolve, 5000));
+  initiateRewardsProcessing(1)
+})

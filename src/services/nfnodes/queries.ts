@@ -15,7 +15,7 @@ export const getActiveWubiNfNodes = async () => {
         AND n.asset_id IS NOT NULL
         ORDER BY n.id ASC
       `)
-  //TODO: change asset_id to solana_asset_id
+  //@TODO: change asset_id to solana_asset_id
   return rows as WubiNFNodes[]
 }
 
@@ -33,7 +33,7 @@ export const getActiveWupiNfNodes = async () => {
         AND n.asset_id IS NOT NULL
         ORDER BY n.id ASC
       `)
-  //TODO: change asset_id to solana_asset_id
+  //@TODO: change asset_id to solana_asset_id
   return rows as WupiNFNodes[]
 }
 
