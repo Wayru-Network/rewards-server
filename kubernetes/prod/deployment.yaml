@@ -34,11 +34,11 @@ spec:
             - name: RABBIT_HOST
               value: 64.236.65.232:5672
             - name: WUBI_API_QUEUE
-              value: WIFI_API_QUEUE_PROD
+              value: WUBI_API_QUEUE_PROD
             - name: WUBI_API_QUEUE_RESPONSE
-              value: REWARDS_SERVER_PROD
+              value: REWARDS_SERVER_WUBI_PROD
             - name: WUPI_API_QUEUE
-              value: NAS_API_QUEUE_PROD
+              value: WUPI_API_QUEUE_PROD
             - name: WUPI_API_QUEUE_RESPONSE
               value: REWARDS_SERVER_WUPI_PROD
             - name: NAS_API
