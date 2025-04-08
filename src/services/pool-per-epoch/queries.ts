@@ -74,14 +74,16 @@ export const createCurrentPoolPerEpoch = async (epochParams?: Partial<PoolPerEpo
                 wubi_messages_received,
                 wubi_messages_sent,
                 wubi_processing_status,
+                wubi_error_message,
                 
                 -- WUPI counters
                 wupi_nfnodes_total,
                 wupi_nfnodes_with_score,
                 wupi_messages_received,
                 wupi_messages_sent,
-                wupi_processing_status
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14) 
+                wupi_processing_status,
+                wupi_error_message
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18) 
             RETURNING *`,
             [
                 // Basic dates and pools
@@ -100,13 +102,15 @@ export const createCurrentPoolPerEpoch = async (epochParams?: Partial<PoolPerEpo
                 epochData.wubi_messages_received,
                 epochData.wubi_messages_sent,
                 epochData.wubi_processing_status,
+                epochData.wubi_error_message,
 
                 // WUPI counters
                 epochData.wupi_nfnodes_total,
                 epochData.wupi_nfnodes_with_score,
                 epochData.wupi_messages_received,
                 epochData.wupi_messages_sent,
-                epochData.wupi_processing_status
+                epochData.wupi_processing_status,
+                epochData.wupi_error_message
             ]
         );
 

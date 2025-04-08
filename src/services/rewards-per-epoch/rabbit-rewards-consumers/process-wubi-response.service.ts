@@ -45,7 +45,7 @@ export const processWubiRabbitResponse = async (msg: ConsumeMessage) => {
             throw new Error('error creating rewards per epoch');
         }
 
-        // Track message con el ID del reward
+        // Track message with the reward id
         const { isLastMessage } = await poolMessageTracker.trackMessage(
             epoch_id, 
             'wubi',
