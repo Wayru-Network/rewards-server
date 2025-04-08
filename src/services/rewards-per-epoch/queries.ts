@@ -1,6 +1,6 @@
 import pool from "@config/db"
 import { RewardPerEpochEntry, RewardPerEpoch } from "@interfaces/rewards-per-epoch"
-import { insertRewardsPerEpochNFNodeLinksQuery, insertRewardsPerEpochPoolPerEpochLinksQuery, returnRewardsPerEpochQuery, rewardsPerEpochTable } from "./helpers";
+import { checkExistingRewardQuery, insertRewardsPerEpochNFNodeLinksQuery, insertRewardsPerEpochPoolPerEpochLinksQuery, returnRewardsPerEpochQuery, rewardsPerEpochTable } from "./helpers";
 import { roundDownTo6Decimals } from "@utils/numbers.utils";
 import { UpdatePoolNetworkScoreResponse } from "@interfaces/pool-per-epoch";
 
@@ -16,7 +16,11 @@ export const createRewardsPerEpoch = async (payload: RewardPerEpochEntry) => {
         await client.query('BEGIN');
 
         // a nfnode can have only one reward per epoch with the same type and pool_per_epoch
-      
+        const {rows} = await client.query(checkExistingRewardQuery(nfnode, type, pool_per_epoch));
+        const existDocument = rows?.length > 0 ? rows[0] : null as RewardPerEpoch['id'] | null;
+        if (existDocument) {
+           return existDocument;
+        }
         
         const insertResult = await client.query(`
             INSERT INTO ${rewardsPerEpochTable} 
@@ -89,6 +93,7 @@ export const processRewardsBatch = async (
                         host_payment_status = 'pending',
                         updated_at = $3
                     WHERE id = $2
+                    AND status != 'ready-for-claim' 
                 `,
                 values: [amount, reward.id, new Date()]
             };

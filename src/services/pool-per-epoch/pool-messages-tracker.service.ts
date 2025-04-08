@@ -124,8 +124,8 @@ export class PoolMessageTracker {
             // Return the current progress without incrementing
             const received = counters[type].received;
             const expected = type === 'wubi' 
-                ? Number(pool.wubi_messages_sent || pool.wubi_nfnodes_total) 
-                : Number(pool.wupi_messages_sent || pool.wupi_nfnodes_total);
+                ? (Number(pool.wubi_messages_sent) || Number(pool.wubi_nfnodes_total))
+                : (Number(pool.wupi_messages_sent) || Number(pool.wupi_nfnodes_total));
                 
             return {
                 current: received,
@@ -144,8 +144,8 @@ export class PoolMessageTracker {
         // The rest of the code continues as usual...
         const received = counters[type].received;
         const expected = type === 'wubi' 
-            ? Number(pool.wubi_messages_sent || pool.wubi_nfnodes_total) 
-            : Number(pool.wupi_messages_sent || pool.wupi_nfnodes_total);
+            ? (Number(pool.wubi_messages_sent) || Number(pool.wubi_nfnodes_total))
+            : (Number(pool.wupi_messages_sent) || Number(pool.wupi_nfnodes_total));
 
         // Strict number comparison
         const isLastMessage = received === expected;
@@ -203,11 +203,7 @@ export class PoolMessageTracker {
 
             // Verify that the values were saved correctly
             const savedPool = this.pools.get(poolIdStr);
-            console.log(`Pool ${poolId} saved in global state:`, {
-                id: savedPool?.id,
-                wubi_messages_sent: savedPool?.wubi_messages_sent,
-                wupi_messages_sent: savedPool?.wupi_messages_sent
-            });
+            console.log(`Pool ${poolId} saved in global state:`, savedPool);
         } else {
             console.error(`Failed to retrieve pool ${poolId} from database`);
         }

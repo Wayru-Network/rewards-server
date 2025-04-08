@@ -30,7 +30,7 @@ const ELIGIBILITY_CONFIG: Record<NFNodeRewardType, NFNodeEligibilityConfig> = {
 const checkNFNodeEligibility = async (
     nfnode: NfNode | null,
     type: NFNodeRewardType,
-    rewardSystemProgram: Program<RewardSystem>,
+    rewardSystemProgram: Program<RewardSystem> | null,
     validateEntry: boolean = true
 ): Promise<{ isEligible: boolean; reason?: string }> => {
     try {
@@ -41,7 +41,7 @@ const checkNFNodeEligibility = async (
             };
         }
 
-        if (ENV.SOLANA_ENV !== 'devnet' || !validateEntry) {
+        if (ENV.SOLANA_ENV !== 'devnet' || !validateEntry || !rewardSystemProgram) {
             return { isEligible: true };
         }
 
@@ -76,7 +76,7 @@ const checkNFNodeEligibility = async (
 // Function to get eligible WUBI nodes (uses wayruDeviceId)
 export const getEligibleWubiNFNodes = async (
     wayruDeviceId: string, 
-    rewardSystemProgram: Program<RewardSystem>,
+    rewardSystemProgram: Program<RewardSystem> | null,
     validateEntry: boolean = true
 ): Promise<{ isEligible: boolean; nfnode: NfNode }> => {
     const nfnode = await getNfNodeByWayruDeviceId(wayruDeviceId);

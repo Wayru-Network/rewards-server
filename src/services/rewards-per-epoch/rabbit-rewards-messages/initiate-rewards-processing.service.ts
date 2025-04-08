@@ -37,6 +37,10 @@ export const initiateRewardsProcessing = async (poolId?: number):
             wupi_processing_status: 'sending_messages',
             wubi_nfnodes_total: wubiNFNodes.length,
             wupi_nfnodes_total: wupiNFNodes.length,
+            wubi_messages_sent: 0,
+            wupi_messages_sent: 0,
+            wubi_messages_received: 0,
+            wupi_messages_received: 0,
         });
         if (!epoch) {
             console.log('No epoch found, ending process');
@@ -55,7 +59,11 @@ export const initiateRewardsProcessing = async (poolId?: number):
             console.log('Updating pool per epoch with new nfnodes total');
             await updatePoolPerEpochById(epoch.id, {
                 wubi_nfnodes_total: totalWubiNFNodes.length,
-                wupi_nfnodes_total: totalWupiNFNodes.length
+                wupi_nfnodes_total: totalWupiNFNodes.length,
+                wubi_messages_sent: 0,
+                wupi_messages_sent: 0,
+                wubi_messages_received: 0,
+                wupi_messages_received: 0,
             })
         }
 

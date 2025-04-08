@@ -15,7 +15,10 @@ export class RewardSystemManager {
     private static instance: Program<RewardSystem> | null = null;
     private static isInitializing: boolean = false;
 
-    static async getInstance(): Promise<Program<RewardSystem>> {
+    static async getInstance(): Promise<Program<RewardSystem> | null> {
+        if (ENV.REWARDS_MODE === 'test') {
+            return null;
+        }
         if (RewardSystemManager.instance) {
             return RewardSystemManager.instance;
         }
