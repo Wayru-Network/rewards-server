@@ -30,9 +30,9 @@ spec:
             - name: REWARDS_MODE
               value: test
             - name: SOLANA_ENV
-              value: mainnet-beta
+              value: devnet
             - name: SOLANA_API_URL
-              value: https://mainnet.helius-rpc.com/
+              value: https://devnet.helius-rpc.com/
             - name: PORT
               value: "80"
             - name: RABBIT_HOST
