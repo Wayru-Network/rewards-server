@@ -97,7 +97,7 @@ export const getEligibleWubiNFNodes = async (
 // Function to get eligible WUPI nodes (uses nfnodeId)
 export const getEligibleWupiNFNodes = async (
     nfnodeId: number,
-    rewardSystemProgram: Program<RewardSystem>,
+    rewardSystemProgram: Program<RewardSystem> | null,
     validateEntry: boolean = true
 ): Promise<{ isEligible: boolean; nfnode: NfNode }> => {
     const nfnode = await getNFNodeById(nfnodeId);
