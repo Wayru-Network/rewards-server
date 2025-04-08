@@ -203,7 +203,13 @@ export class PoolMessageTracker {
 
             // Verify that the values were saved correctly
             const savedPool = this.pools.get(poolIdStr);
-            console.log(`Pool ${poolId} saved in global state:`, savedPool);
+            console.log(`Pool ${poolId} saved in global state:`, {
+                id: savedPool?.id,
+                wubi_messages_sent: savedPool?.wubi_messages_sent,
+                wupi_messages_sent: savedPool?.wupi_messages_sent,
+                wubi_nfnodes_total: savedPool?.wubi_nfnodes_total,
+                wupi_nfnodes_total: savedPool?.wupi_nfnodes_total
+            });
         } else {
             console.error(`Failed to retrieve pool ${poolId} from database`);
         }
