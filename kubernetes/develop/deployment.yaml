@@ -43,11 +43,20 @@ spec:
               value: REWARDS_SERVER_WUPI_DEV
             - name: NAS_API
               value: https://nas.api.internal.wayru.tech
+            - name: SOLANA_ENV
+              value: devnet
+            - name: SOLANA_API_URL
+              value: https://devnet.helius-rpc.com/
             - name: NAS_API_KEY
               valueFrom:
                 secretKeyRef:
                   name: rewards-server-secrets
                   key: NAS_API_KEY
+            - name: SOLANA_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: rewards-server-secrets
+                  key: SOLANA_API_KEY
             - name: SOLANA_PRIVATE_KEY
               valueFrom:
                 secretKeyRef:

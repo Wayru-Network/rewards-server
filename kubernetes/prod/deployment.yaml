@@ -29,6 +29,10 @@ spec:
               value: production
             - name: REWARDS_MODE
               value: test
+            - name: SOLANA_ENV
+              value: mainnet-beta
+            - name: SOLANA_API_URL
+              value: https://mainnet.helius-rpc.com/
             - name: PORT
               value: "80"
             - name: RABBIT_HOST
@@ -48,6 +52,11 @@ spec:
                 secretKeyRef:
                   name: rewards-server-secrets
                   key: NAS_API_KEY
+            - name: SOLANA_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: rewards-server-secrets
+                  key: SOLANA_API_KEY
             - name: SOLANA_PRIVATE_KEY
               valueFrom:
                 secretKeyRef:
