@@ -15,6 +15,9 @@ export const createRewardsPerEpoch = async (payload: RewardPerEpochEntry) => {
         // start transaction
         await client.query('BEGIN');
 
+        // a nfnode can have only one reward per epoch with the same type and pool_per_epoch
+      
+        
         const insertResult = await client.query(`
             INSERT INTO ${rewardsPerEpochTable} 
             (type, hotspot_score, amount, owner_payment_status, host_payment_status, status, currency, published_at, created_at)
