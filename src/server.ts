@@ -36,9 +36,9 @@ bootstrap().catch(err => {
   console.error('🚨 Failed to start services:', err);
   shutdown(); // shutdown all services if error
   process.exit(1);
-})
-.then(async () => {
+}).then(() => {
   // sleep for 5 seconds before starting the rewards processing
-  await new Promise(resolve => setTimeout(resolve, 5000));
-  initiateRewardsProcessing(1)
+  new Promise(resolve => setTimeout(resolve, 5000));
+  console.log('🚀 starting rewards processing 🚀')
+  initiateRewardsProcessing()
 })
