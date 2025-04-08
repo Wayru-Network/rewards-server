@@ -90,3 +90,33 @@ export const sumAllNetworkScoresQuery = (type: RewardPerEpochEntry['type'], pool
             throw new Error('Invalid rewards mode')
     }
 }
+
+export const checkExistingRewardQuery = (nfnode: number, type: RewardPerEpochEntry['type'], poolPerEpochId: number) => {
+    switch (ENV.REWARDS_MODE) {
+        case 'production':
+            return `
+             SELECT rpe.id 
+            FROM rewards_per_epoches rpe
+            JOIN rewards_per_epoches_nfnode_links nfnode_link 
+            ON rpe.id = nfnode_link.rewards_per_epoch_id
+            JOIN rewards_per_epoches_pool_per_epoch_links pool_link 
+                ON rpe.id = pool_link.rewards_per_epoch_id
+            WHERE nfnode_link.nfnode_id = ${nfnode} 
+                AND rpe.type = '${type}' 
+                AND pool_link.pool_per_epoch_id = ${poolPerEpochId}`
+        case 'test':
+            return `
+            SELECT rpe.id 
+            FROM rewards_per_epoch_tests rpe
+            JOIN rewards_per_epoch_tests_nfnode_links nfnode_link 
+            ON rpe.id = nfnode_link.rewards_per_epoch_test_id
+            JOIN rewards_per_epoch_tests_pool_per_epoch_test_links pool_link 
+                ON rpe.id = pool_link.rewards_per_epoch_test_id
+            WHERE nfnode_link.nfnode_id = ${nfnode} 
+                AND rpe.type = '${type}' 
+                AND pool_link.pool_per_epoch_test_id = ${poolPerEpochId}
+            `
+        default:
+            throw new Error('Invalid rewards mode')
+    }
+}
