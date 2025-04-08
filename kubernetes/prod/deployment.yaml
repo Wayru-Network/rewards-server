@@ -48,6 +48,11 @@ spec:
                 secretKeyRef:
                   name: rewards-server-secrets
                   key: NAS_API_KEY
+            - name: SOLANA_PRIVATE_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: rewards-server-secrets
+                  key: SOLANA_PRIVATE_KEY
             - name: DATABASE_PASSWORD
               valueFrom:
                 secretKeyRef:
