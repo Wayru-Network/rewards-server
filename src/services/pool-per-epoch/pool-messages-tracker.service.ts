@@ -1,10 +1,8 @@
 import { BatchProgress, PoolPerEpoch } from "@interfaces/pool-per-epoch";
 import { getActivePools as getActivePoolsQuery, getPoolPerEpochById, updatePoolPerEpochById } from "@services/pool-per-epoch/queries";
+import { poolPerEpochInstance } from "@services/pool-per-epoch/pool-per-epoch-instance.service";
 
 export class PoolMessageTracker {
-    // Global state of pools
-    private pools: Map<string, PoolPerEpoch> = new Map();
-
     // State of message counters
     private messageCounters: Map<string, {
         wubi: { received: number; },
@@ -43,16 +41,18 @@ export class PoolMessageTracker {
             const activePools = await this.getActivePools();
             console.log(`Found ${activePools.length} active pools`);
 
-            // Save all active pools in the global state
+            // Initialize counters for all active pools
             for (const pool of activePools) {
-                this.pools.set(pool.id.toString(), pool);
-                // Initialize counters in 0
+                // Save pool in the shared instance
+                poolPerEpochInstance.saveInstance(pool);
+
+                // Initialize counters
                 this.initializeCounters(pool.id.toString());
             }
 
             console.log('Pools initialized:',
-                Array.from(this.pools.entries()).map(([id, pool]) => ({
-                    id,
+                activePools.map(pool => ({
+                    id: pool.id,
                     wubi_messages_sent: pool.wubi_messages_sent,
                     wupi_messages_sent: pool.wupi_messages_sent
                 }))
@@ -63,8 +63,9 @@ export class PoolMessageTracker {
         }
     }
 
-    private initializeCounters(poolId: string) {
-        const pool = this.pools.get(poolId);
+    private async initializeCounters(poolId: string) {
+        // Use poolPerEpochInstance to get the pool
+        const pool = await poolPerEpochInstance.getById(Number(poolId));
         if (!pool) {
             throw new Error(`Cannot initialize counters for pool ${poolId}: Pool not found`);
         }
@@ -88,13 +89,25 @@ export class PoolMessageTracker {
         });
     }
 
-    private async updateDatabase(poolId: number, type: 'wubi' | 'wupi', current: number) {
+    private async updateDatabaseCounters(poolId: number, type: 'wubi' | 'wupi', current: number) {
         console.log(`📊 Updating database for ${type} poolId: ${poolId} with count: ${current}`);
         const updateData = type === 'wubi'
             ? { wubi_messages_received: current }
             : { wupi_messages_received: current };
 
         await updatePoolPerEpochById(poolId, updateData);
+
+        // Also update the instance in poolPerEpochInstance
+        const pool = await poolPerEpochInstance.getById(poolId);
+        if (pool) {
+            const updatedPool = { ...pool };
+            if (type === 'wubi') {
+                updatedPool.wubi_messages_received = current;
+            } else {
+                updatedPool.wupi_messages_received = current;
+            }
+            poolPerEpochInstance.saveInstance(updatedPool);
+        }
     }
 
     /**
@@ -106,8 +119,9 @@ export class PoolMessageTracker {
      */
     async trackMessage(poolId: number, type: 'wubi' | 'wupi', rewardId: number): Promise<BatchProgress> {
         const poolIdStr = poolId.toString();
-        
-        const pool = this.pools.get(poolIdStr);
+
+        // Use poolPerEpochInstance to get the pool
+        const pool = await poolPerEpochInstance.getById(poolId);
         if (!pool) {
             throw new Error(`Pool ${poolId} not found in global state. Please register or refresh the pool first.`);
         }
@@ -120,13 +134,13 @@ export class PoolMessageTracker {
         // Check if we have already processed this reward
         if (this.processedRewardIds.has(rewardId)) {
             console.log(`⚠️ Duplicate message detected: reward ${rewardId} already processed`);
-            
+
             // Return the current progress without incrementing
             const received = counters[type].received;
-            const expected = type === 'wubi' 
+            const expected = type === 'wubi'
                 ? (Number(pool.wubi_messages_sent) || Number(pool.wubi_nfnodes_total))
                 : (Number(pool.wupi_messages_sent) || Number(pool.wupi_nfnodes_total));
-                
+
             return {
                 current: received,
                 total: expected,
@@ -134,7 +148,7 @@ export class PoolMessageTracker {
                 isLastMessage: received === expected
             };
         }
-        
+
         // Mark as processed
         this.processedRewardIds.add(rewardId);
 
@@ -143,7 +157,7 @@ export class PoolMessageTracker {
 
         // The rest of the code continues as usual...
         const received = counters[type].received;
-        const expected = type === 'wubi' 
+        const expected = type === 'wubi'
             ? (Number(pool.wubi_messages_sent) || Number(pool.wubi_nfnodes_total))
             : (Number(pool.wupi_messages_sent) || Number(pool.wupi_nfnodes_total));
 
@@ -154,16 +168,18 @@ export class PoolMessageTracker {
             console.log(`📨 First ${type} message received for pool ${poolId}`);
         }
 
-        if (received % this.LOG_FREQUENCY === 0 || 
-            isLastMessage || 
+        if (received % this.LOG_FREQUENCY === 0 ||
+            isLastMessage ||
             (received === Math.floor(expected / 2))) {
             console.log(`📊 Progress for ${type} poolId: ${poolId} - ${received}/${expected} (${(expected > 0 ? (received / expected) * 100 : 0).toFixed(2)}%)`);
+            // Update database with current count
+            await this.updateDatabaseCounters(poolId, type, received);
         }
 
         if (isLastMessage) {
             console.log(`✅ All expected messages received for ${type} poolId: ${poolId} (${received}/${expected})`);
             // Update database with final count
-            await this.updateDatabase(poolId, type, received);
+            await this.updateDatabaseCounters(poolId, type, received);
         }
 
         // Add timeout check
@@ -186,59 +202,51 @@ export class PoolMessageTracker {
     async registerPool(poolId: number) {
         const poolIdStr = poolId.toString();
 
-        if (this.pools.has(poolIdStr)) {
-            console.log(`Pool ${poolId} already registered`, {
-                pool: this.pools.get(poolIdStr)
-            });
-            return;
-        }
-
-        const pool = await getPoolPerEpochById(poolId);
+        // this always returns the pool from the global instance, because also find it in the database
+        const pool = await poolPerEpochInstance.getById(poolId);
         if (pool) {
+            console.log(`Pool ${poolId} already registered`);
 
-            // Save in the global state of pools
-            this.pools.set(poolIdStr, pool);
-            // Initialize counters
-            this.initializeCounters(poolIdStr);
+            // Ensure we have counters for this pool
+            if (!this.messageCounters.has(poolIdStr)) {
+                this.initializeCounters(poolIdStr);
+            }
 
-            // Verify that the values were saved correctly
-            const savedPool = this.pools.get(poolIdStr);
-            console.log(`Pool ${poolId} saved in global state:`, {
-                id: savedPool?.id,
-                wubi_messages_sent: savedPool?.wubi_messages_sent,
-                wupi_messages_sent: savedPool?.wupi_messages_sent,
-                wubi_nfnodes_total: savedPool?.wubi_nfnodes_total,
-                wupi_nfnodes_total: savedPool?.wupi_nfnodes_total
+            console.log(`Pool ${poolId} registered successfully from message tracker:`, {
+                id: pool.id,
+                wubi_messages_sent: pool.wubi_messages_sent,
+                wupi_messages_sent: pool.wupi_messages_sent,
+                wubi_nfnodes_total: pool.wubi_nfnodes_total,
+                wupi_nfnodes_total: pool.wupi_nfnodes_total
             });
         } else {
             console.error(`Failed to retrieve pool ${poolId} from database`);
         }
     }
 
-    // method to clear the cache of a specific pool
+    // method to clear the counters of a specific pool
     clearCache(poolId: string) {
-        this.pools.delete(poolId);
         this.messageCounters.delete(poolId);
-        console.log(`✅ Cache cleared for pool ${poolId}`);
+        this.processedRewardIds.clear(); // Optional: clear processed IDs too
+        console.log(`✅ Message counters cleared for pool ${poolId}`);
     }
 
-    // method to get active pools (implement according to your logic)
+    // method to get active pools
     private async getActivePools(): Promise<PoolPerEpoch[]> {
         const activePools = await getActivePoolsQuery();
         return activePools;
     }
 
     async refreshPool(poolId: number, type: 'wubi' | 'wupi', totalMessagesSent: number): Promise<void> {
-        const poolIdStr = poolId.toString();
         console.log(`🔄 Refreshing pool ${poolId} state for ${type}...`);
 
-        // Get the current pool from the global state
-        const currentPool = this.pools.get(poolIdStr);
+        // Get the current pool from poolPerEpochInstance
+        const currentPool = await poolPerEpochInstance.getById(poolId);
         if (!currentPool) {
             throw new Error(`Pool ${poolId} not found in global state`);
         }
 
-        // Create a copy of the current pool
+        // Create a copy of the current pool with updated values
         const updatedPool = { ...currentPool };
 
         // Update only the field corresponding to the type
@@ -259,8 +267,8 @@ export class PoolMessageTracker {
             }
         });
 
-        // Update the pool in the global state
-        this.pools.set(poolIdStr, updatedPool);
+        // Update the pool in the global instance
+        poolPerEpochInstance.saveInstance(updatedPool);
     }
 }
 

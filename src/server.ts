@@ -40,5 +40,5 @@ bootstrap().catch(err => {
   // sleep for 5 seconds before starting the rewards processing
   new Promise(resolve => setTimeout(resolve, 5000));
   console.log('🚀 starting rewards processing 🚀')
-  initiateRewardsProcessing()
+  initiateRewardsProcessing(4)
 })

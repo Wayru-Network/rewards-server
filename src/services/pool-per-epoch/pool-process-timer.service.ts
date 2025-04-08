@@ -4,6 +4,7 @@ import { updatePoolPerEpochById, getPoolPerEpochById } from "@services/pool-per-
 import { RewardSystemManager } from "@services/solana/reward-system/reward-system.manager";
 import { PoolPerEpoch } from "@interfaces/pool-per-epoch";
 import { poolMessageTracker } from "@services/pool-per-epoch/pool-messages-tracker.service";
+import { poolPerEpochInstance } from "./pool-per-epoch-instance.service";
 
 export class PoolProcessTimer {
     private processData: {
@@ -120,6 +121,7 @@ export class PoolProcessTimer {
                 // Clean up the reward system manager
                 RewardSystemManager.cleanup();
                 poolMessageTracker.clearCache(pool.id.toString());
+                poolPerEpochInstance.clearAllInstances();
 
             this.resetProcess();
         }
