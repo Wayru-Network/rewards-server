@@ -26,7 +26,7 @@ export const getActiveWubiNfNodes = async () => {
  */
 export const getActiveWupiNfNodes = async () => {
   const { rows } = await pool.query(`
-        SELECT n.id, n.mac
+        SELECT n.id, n.mac, n.nas_id
         FROM nfnodes AS n
         WHERE n.status = 'active'
         AND n.mac IS NOT NULL
