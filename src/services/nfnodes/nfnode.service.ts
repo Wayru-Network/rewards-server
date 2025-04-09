@@ -40,7 +40,7 @@ const checkNFNodeEligibility = async (
             };
         }
 
-        if (ENV.SOLANA_ENV !== 'devnet' || !rewardSystemProgram) {
+        if (ENV.SOLANA_ENV === 'devnet' || !rewardSystemProgram) {
             return { isEligible: true };
         }
 
@@ -83,11 +83,9 @@ export const getEligibleWubiNFNodes = async (
         'wubi',
         rewardSystemProgram
     );
-
     if (!isEligible) {
-        console.log(`WUBI node ${wayruDeviceId} not eligible: ${reason}`);
+        console.log(`🚨 ${nfnode?.wayru_device_id} is not eligible for wubi rewards`);
     }
-
     return {isEligible, nfnode};
 };
 
@@ -102,10 +100,8 @@ export const getEligibleWupiNFNodes = async (
         'wupi',
         rewardSystemProgram
     );
-
     if (!isEligible) {
-        console.log(`WUPI node ${nfnodeId} not eligible: ${reason}`);
+        console.log(`🚨 ${nfnode?.wayru_device_id} is not eligible for wupi rewards`);
     }
-
     return {isEligible, nfnode};
 };

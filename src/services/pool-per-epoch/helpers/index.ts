@@ -52,7 +52,7 @@ export const queryCountRewardsPerEpochByPoolId = (poolId: number) => {
                     FROM rewards_per_epoches rpe
                     INNER JOIN rewards_per_epoches_pool_per_epoch_links link 
                         ON rpe.id = link.rewards_per_epoch_id
-                    INNER JOIN pool_per_epochs ppe 
+                    INNER JOIN pool_per_epoch ppe 
                         ON link.pool_per_epoch_id = ppe.id
                 WHERE ppe.id = ${poolId}
                 GROUP BY 
