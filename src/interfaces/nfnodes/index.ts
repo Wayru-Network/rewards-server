@@ -24,12 +24,13 @@ export interface NfNode {
     solana_asset_id: string
     created_at: Date
     updated_at: Date
+    nas_id?: string
 }
 
 export type NfNodeEntry = Omit<NfNode, 'id'>
 
 export type WubiNFNodes = Pick<NfNode, 'id' | 'wayru_device_id'>
-export type WupiNFNodes = Pick<NfNode, 'id' | 'mac'>
+export type WupiNFNodes = Pick<NfNode, 'id' | 'mac' | 'nas_id'>
 
 
 export type NFNodeEntryDetails = {

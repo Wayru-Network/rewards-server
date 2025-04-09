@@ -297,7 +297,7 @@ export const processWUPIWithConcurrency = async (nfNodes: WupiNFNodes[], epoch: 
                                 await new Promise((resolve) => setTimeout(resolve, TIME_DELAY));
                                 const epochDate = moment(epoch.epoch).format('YYYY-MM-DD');
                                 const message = {
-                                    nas_id: nfNode.mac,
+                                    nas_id: nfNode?.nas_id || nfNode.mac,
                                     nfnode_id: nfNode.id,
                                     total_valid_nas: nfNodes?.length,
                                     epoch: epochDate as unknown as Date
