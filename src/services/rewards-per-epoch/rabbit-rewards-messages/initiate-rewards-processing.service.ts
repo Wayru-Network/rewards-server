@@ -9,9 +9,10 @@ import { rabbitWrapper } from '@services/rabbitmq-wrapper/rabbitmq.service';
 import { eventHub } from "@services/events/event-hub";
 import { EventName } from "@interfaces/events";
 import { poolMessageTracker } from "@services/pool-per-epoch/pool-messages-tracker.service";
-import { PoolPerEpoch } from "@interfaces/pool-per-epoch";
+import { PoolPerEpoch, PoolPerEpochEntry } from "@interfaces/pool-per-epoch";
 import { ENV } from "@config/env/env";
 import moment from 'moment'
+import { poolPerEpochInstance } from "@services/pool-per-epoch/pool-per-epoch-instance.service";
 
 
 /**
@@ -25,97 +26,142 @@ import moment from 'moment'
 export const initiateRewardsProcessing = async (poolId?: number):
     Promise<{ error: boolean, message?: string, epoch?: PoolPerEpoch }> => {
     try {
-        const startTime = Date.now()
-
-        let [wubiNFNodes, wupiNFNodes] = await Promise.all([
+        const startTime = Date.now();
+        
+        // Get active nodes
+        const [wubiNFNodes, wupiNFNodes] = await Promise.all([
             getActiveWubiNfNodes(),
             getActiveWupiNfNodes()
         ]);
-
-        let epoch = poolId ? await getPoolPerEpochById(poolId) : await createCurrentPoolPerEpoch({
-            wubi_processing_status: 'sending_messages',
-            wupi_processing_status: 'sending_messages',
-            wubi_nfnodes_total: wubiNFNodes.length,
-            wupi_nfnodes_total: wupiNFNodes.length,
-            wubi_messages_sent: 0,
-            wupi_messages_sent: 0,
-            wubi_messages_received: 0,
-            wupi_messages_received: 0,
-        });
-        if (!epoch) {
-            console.log('No epoch found, ending process');
-            return { error: true, message: 'No epoch found' };
+        
+        console.log(`Found ${wubiNFNodes.length} wUBI and ${wupiNFNodes.length} wUPI active nodes`);
+        
+        // Validate if there are active nodes
+        const totalNodes = wubiNFNodes.length + wupiNFNodes.length;
+        if (totalNodes === 0) {
+            console.log('⚠️ No active nodes found, ending process');
+            return { error: true, message: 'No active nodes found' };
         }
-        // get the total of nfnodes from the epoch
-        const epochWubiNFNodesTotal = Number(epoch.wubi_nfnodes_total)
-        const epochWupiNFNodesTotal = Number(epoch.wupi_nfnodes_total)
-        // declare total wubi and wupi nfnodes to send messages
-
-        const totalWubiNFNodes = wubiNFNodes //.slice(0, 10)
-        const totalWupiNFNodes = wupiNFNodes //.slice(0, 10)
-
-        // if the wubi_nfnodes_total or wupi_nfnodes_total is different from the total of nfnodes, we need to update the pool per epoch
-        if (totalWubiNFNodes.length !== epochWubiNFNodesTotal || totalWupiNFNodes.length !== epochWupiNFNodesTotal) {
-            console.log('Updating pool per epoch with new nfnodes total');
-            await updatePoolPerEpochById(epoch.id, {
-                wubi_nfnodes_total: totalWubiNFNodes.length,
-                wupi_nfnodes_total: totalWupiNFNodes.length,
+        
+        // Get or create epoch, using poolPerEpochInstance to load the pool
+        let epoch: PoolPerEpoch | null;
+        
+        if (poolId) {
+            // Get the epoch from the global instance
+            epoch = await poolPerEpochInstance.getById(poolId);
+  
+            if (!epoch) {
+                console.log('❌ No epoch found, ending process');
+                return { error: true, message: 'No epoch found' };
+            }
+                
+            // Update the necessary fields for the epoch
+            const updateData = {
+                wubi_processing_status: 'sending_messages',
+                wupi_processing_status: 'sending_messages',
+                processing_metrics: {
+                    ...epoch.processing_metrics,
+                    startTime: startTime,
+                    totalWubiNFNodes: wubiNFNodes.length,
+                    totalWupiNFNodes: wupiNFNodes.length
+                }
+            } as Partial<PoolPerEpochEntry>
+            
+            // If the total of nodes changed, update those fields also
+            if (wubiNFNodes.length !== Number(epoch.wubi_nfnodes_total) || 
+                wupiNFNodes.length !== Number(epoch.wupi_nfnodes_total)) {
+                Object.assign(updateData, {
+                    wubi_nfnodes_total: wubiNFNodes.length,
+                    wupi_nfnodes_total: wupiNFNodes.length,
+                    wubi_messages_sent: 0,
+                    wupi_messages_sent: 0,
+                    wubi_messages_received: 0,
+                    wupi_messages_received: 0,
+                });
+            }
+            
+            // If there is a score, reset it
+            const totalScore = Number(epoch.network_score || 0) + Number(epoch.network_score_upi || 0);
+            if (totalScore > 0) {
+                Object.assign(updateData, {
+                    network_score: 0,
+                    network_score_upi: 0,
+                });
+            }
+            
+            // make a single update to the database
+            const updatedEpoch = await updatePoolPerEpochById(poolId, updateData);
+            if (!updatedEpoch) {
+                console.log('❌ Error updating pool per epoch');
+                return { error: true, message: 'Error updating pool per epoch' };
+            }
+            
+            // Update the global instance
+            poolPerEpochInstance.saveInstance(updatedEpoch);
+            epoch = updatedEpoch;
+            
+        } else {
+            // Create new pool
+            epoch = await createCurrentPoolPerEpoch({
+                wubi_processing_status: 'sending_messages',
+                wupi_processing_status: 'sending_messages',
+                wubi_nfnodes_total: wubiNFNodes.length,
+                wupi_nfnodes_total: wupiNFNodes.length,
                 wubi_messages_sent: 0,
                 wupi_messages_sent: 0,
                 wubi_messages_received: 0,
                 wupi_messages_received: 0,
-            })
+                processing_metrics: {
+                    startTime: startTime,
+                    totalWubiNFNodes: wubiNFNodes.length,
+                    totalWupiNFNodes: wupiNFNodes.length
+                }
+            });
+            
+            if (!epoch) {
+                console.log('❌ No epoch created, ending process');
+                return { error: true, message: 'No epoch created' };
+            }
+            
+            // Save in the global instance
+            poolPerEpochInstance.saveInstance(epoch);
         }
 
-        // emit the event that the rewards process has started
+        // Register pool for message tracking
+        await poolMessageTracker.registerPool(epoch.id);
+        
+        // Get epoch number and wayru earned
+        const epochNumber = await getPoolPerEpochNumber(epoch.epoch);
+        const wayruEarned = Number(getPoolPerEpochAmount(epochNumber)) / 1000000;
+        console.log(`Epoch ${epochNumber}, Wayru earned: ${wayruEarned}`);
+        
+        // Emit event of start
         eventHub.emit(EventName.REWARDS_PROCESS_STARTED, {
             startTime,
-            totalWubiNFNodes: totalWubiNFNodes.length,
-            totalWupiNFNodes: totalWupiNFNodes.length,
+            totalWubiNFNodes: wubiNFNodes.length,
+            totalWupiNFNodes: wupiNFNodes.length,
             epochId: epoch.id
-        })
-
-        // get the epoch number & wayru earned
-        const epochNumber = await getPoolPerEpochNumber(epoch.epoch)
-        const wayruEarned = Number(getPoolPerEpochAmount(epochNumber)) / 1000000
-        // @TODO: we can sum here the wayruEarned into stats table () =>
-        console.log('wayruEarned', wayruEarned)
-
-        // if there aren't actives wubi or wupi nodes, we can return
-        const totalNodes = totalWubiNFNodes.length + totalWupiNFNodes.length;
-        if (totalNodes === 0) {
-            console.log('No active nodes found, ending process');
-            return { error: true, message: 'No active nodes found' };
-        }
-        console.log('wubi nfnodes:', wubiNFNodes.length)
-        console.log('wupi nfnodes:', wupiNFNodes.length)
-
-        // now update the pool if it has a score greater than 0
-        const totalScore = epoch.network_score + epoch.network_score_upi
-        if (totalScore > 0) {
-            // assign again the epoch updated
-            epoch = await updatePoolPerEpochById(epoch.id, {
-                network_score: 0,
-                network_score_upi: 0,
-            })
-            if (!epoch) {
-                console.log('Error updating pool per epoch')
-                return { error: true, message: 'Error updating pool per epoch' }
-            }
-        }
-
-        // register batch
-        poolMessageTracker.registerPool(epoch.id)
-
-        // now process the nfnodes and calculate their scores
-        processWUBIWithConcurrency(totalWubiNFNodes, epoch)
-        processWUPIWithConcurrency(totalWupiNFNodes, epoch)
-        return { error: false, epoch: epoch }
+        });
+        
+        // Process nodes concurrently
+        processWUBIWithConcurrency(wubiNFNodes, epoch);
+        processWUPIWithConcurrency(wupiNFNodes, epoch);
+        
+        return { error: false, epoch: epoch };
     } catch (error) {
-        console.error('error processing rewards per epoch', error)
-        return { error: true, message: error as string }
+        console.error('❌ Error processing rewards:', error);
+        
+        // More detailed error handling
+        const errorMessage = error instanceof Error 
+            ? `${error.name}: ${error.message}` 
+            : String(error);
+            
+        return { 
+            error: true, 
+            message: `Error processing rewards: ${errorMessage}`
+        };
     }
-}
+};
 
 // process wubi nfnodes with concurrency
 export const processWUBIWithConcurrency = async (nfNodes: WubiNFNodes[], poolPerEpoch: PoolPerEpoch) => {
