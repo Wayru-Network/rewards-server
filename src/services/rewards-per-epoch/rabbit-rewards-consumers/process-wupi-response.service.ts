@@ -3,10 +3,10 @@ import { getEligibleWupiNFNodes, getNfNodeMultiplier } from "@services/nfnodes/n
 import { RewardSystemManager } from "@services/solana/reward-system/reward-system.manager";
 import { ConsumeMessage } from "amqplib";
 import { createRewardsPerEpoch } from "../queries";
-import { getPoolPerEpochByEpoch } from "@services/pool-per-epoch/pool-per-epoch.service";
 import { eventHub } from "@services/events/event-hub";
 import { EventName } from "@interfaces/events";
 import { poolMessageTracker } from "@services/pool-per-epoch/pool-messages-tracker.service";
+import { poolPerEpochInstance } from "@services/pool-per-epoch/pool-per-epoch-instance.service";
 
 export const processWupiRabbitResponse = async (msg: ConsumeMessage) => {
     try {
@@ -21,17 +21,17 @@ export const processWupiRabbitResponse = async (msg: ConsumeMessage) => {
         const rewardSystemProgram = await RewardSystemManager.getInstance();
 
         // Get eligible nfnode
-        const {isEligible, nfnode} = await getEligibleWupiNFNodes(nfnode_id, rewardSystemProgram, false);
+        const {isEligible, nfnode} = await getEligibleWupiNFNodes(nfnode_id, rewardSystemProgram);
 
         // Calculate multiplier
         const multiplier = isEligible ? getNfNodeMultiplier(nfnode) : 0;
 
         // Get epoch document
-        const epochDocument = await getPoolPerEpochByEpoch(epoch);
+        const epochDocument = await poolPerEpochInstance.getByEpoch(epoch);
 
         if (!epochDocument) {
             console.error('epoch not found');
-            throw new Error('epoch not found'); // throw error to be handled by the wrapper
+            return
         }
 
         // Calculate score

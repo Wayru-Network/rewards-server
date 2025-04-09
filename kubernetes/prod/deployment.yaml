@@ -29,16 +29,20 @@ spec:
               value: production
             - name: REWARDS_MODE
               value: test
+            - name: SOLANA_ENV
+              value: devnet
+            - name: SOLANA_API_URL
+              value: https://devnet.helius-rpc.com/
             - name: PORT
               value: "80"
             - name: RABBIT_HOST
               value: 64.236.65.232:5672
             - name: WUBI_API_QUEUE
-              value: WIFI_API_QUEUE_PROD
+              value: WUBI_API_QUEUE_PROD
             - name: WUBI_API_QUEUE_RESPONSE
-              value: REWARDS_SERVER_PROD
+              value: REWARDS_SERVER_WUBI_PROD
             - name: WUPI_API_QUEUE
-              value: NAS_API_QUEUE_PROD
+              value: WUPI_API_QUEUE_PROD
             - name: WUPI_API_QUEUE_RESPONSE
               value: REWARDS_SERVER_WUPI_PROD
             - name: NAS_API
@@ -48,6 +52,16 @@ spec:
                 secretKeyRef:
                   name: rewards-server-secrets
                   key: NAS_API_KEY
+            - name: SOLANA_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: rewards-server-secrets
+                  key: SOLANA_API_KEY
+            - name: SOLANA_PRIVATE_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: rewards-server-secrets
+                  key: SOLANA_PRIVATE_KEY
             - name: DATABASE_PASSWORD
               valueFrom:
                 secretKeyRef:

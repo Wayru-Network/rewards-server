@@ -6,6 +6,7 @@ import { EventName } from "@interfaces/events";
 import { WubiMessage } from "@interfaces/rabbitmq-wrapper";
 import { RewardSystemManager } from "@services/solana/reward-system/reward-system.manager";
 import { poolMessageTracker } from "@services/pool-per-epoch/pool-messages-tracker.service";
+import { poolPerEpochInstance } from "@services/pool-per-epoch/pool-per-epoch-instance.service";
 
 export const processWubiRabbitResponse = async (msg: ConsumeMessage) => {
     try {
@@ -13,8 +14,12 @@ export const processWubiRabbitResponse = async (msg: ConsumeMessage) => {
 
         const { hotspot_score, wayru_device_id, epoch_id, last_item } = message as WubiMessage;
         // Validation of the message
-        if (typeof hotspot_score !== 'number' || !wayru_device_id || !epoch_id || typeof last_item !== 'boolean') {
+        if (!wayru_device_id || !epoch_id || typeof last_item !== 'boolean') {
             console.error('invalid Wubi message');
+            console.log(' hotspot_score', hotspot_score);
+            console.log(' wayru_device_id', wayru_device_id);
+            console.log(' epoch_id', epoch_id);
+            console.log(' last_item', last_item);
             throw new Error('invalid Wubi message'); // throw error to be handled by the wrapper
         }
 
@@ -22,16 +27,24 @@ export const processWubiRabbitResponse = async (msg: ConsumeMessage) => {
         const rewardSystemProgram = await RewardSystemManager.getInstance();
 
         // Check eligibility
-        const { isEligible, nfnode } = await getEligibleWubiNFNodes(wayru_device_id, rewardSystemProgram, false);
+        const { isEligible, nfnode } = await getEligibleWubiNFNodes(wayru_device_id, rewardSystemProgram);
+
+        // validate epoch id 
+        const epochDocument = await poolPerEpochInstance.getById(epoch_id);
+
+        if (!epochDocument) {
+            console.error('epoch not found');
+            return
+        }
 
         // Calculate multiplier
         const multiplier = isEligible ? getNfNodeMultiplier(nfnode) : 0;
 
         // Create rewards
         const reward = await createRewardsPerEpoch({
-            hotspot_score: hotspot_score * multiplier,
+            hotspot_score: hotspot_score ?? 0 * multiplier,
             nfnode: nfnode.id,
-            pool_per_epoch: epoch_id,
+            pool_per_epoch: epochDocument.id,
             status: 'calculating',
             type: 'wUBI',
             amount: 0,
@@ -45,9 +58,9 @@ export const processWubiRabbitResponse = async (msg: ConsumeMessage) => {
             throw new Error('error creating rewards per epoch');
         }
 
-        // Track message con el ID del reward
+        // Track message with the reward id
         const { isLastMessage } = await poolMessageTracker.trackMessage(
-            epoch_id, 
+            epochDocument?.id, 
             'wubi',
             reward.id
         );
@@ -55,7 +68,7 @@ export const processWubiRabbitResponse = async (msg: ConsumeMessage) => {
         // update the pool per epoch
         if (isLastMessage) {
             eventHub.emit(EventName.LAST_REWARD_CREATED, {
-                epochId: epoch_id,
+                epochId: epochDocument?.id,
                 type: 'wUBI'
             });
         }
