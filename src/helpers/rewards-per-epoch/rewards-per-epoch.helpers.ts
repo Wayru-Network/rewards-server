@@ -25,7 +25,7 @@ export const checkWubiSync = async (epochDate: string): Promise<boolean> => {
 // log the progress of the rewards per epoch
 export const logProgress = (processed: number, total: number, type: 'WUBI' | 'WUPI') => {
     const percentage = ((processed / total) * 100).toFixed(2);
-    console.log(`${type} Progress: ${processed}/${total} (${percentage}%)`);
+    console.log(`${type} sending messages progress: ${processed}/${total} (${percentage}%)`);
 };
 
 // with retry

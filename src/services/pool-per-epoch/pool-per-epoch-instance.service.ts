@@ -103,18 +103,10 @@ class PoolPerEpochInstance {
      */
     public saveInstance(pool: PoolPerEpoch): void {
         const epochKey = moment(pool.epoch).format('YYYY-MM-DD');
-  
         // 3. Save new pool and save index
         this.epochIndex.set(epochKey, pool.id);
         this.instances.set(pool.id, pool);
         this.lastAccess.set(pool.id, Date.now());
-
-        const countInstances = this.instances.size;
-        const countEpochIndex = this.epochIndex.size;
-        
-        console.log(`✅ Pool ${pool.id} saved correctly in global state with epoch: ${epochKey}`);
-        console.log(`🔍 Total instances: ${countInstances}`);
-        console.log(`🔍 Total epoch index: ${countEpochIndex}`);
     }
     
     /**
