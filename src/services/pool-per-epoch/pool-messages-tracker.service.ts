@@ -90,7 +90,6 @@ export class PoolMessageTracker {
     }
 
     private async updateDatabaseCounters(poolId: number, type: 'wubi' | 'wupi', current: number) {
-        console.log(`📊 Updating database for ${type} poolId: ${poolId} with count: ${current}`);
         const updateData = type === 'wubi'
             ? { wubi_messages_received: current }
             : { wupi_messages_received: current };
@@ -171,7 +170,7 @@ export class PoolMessageTracker {
         if (received % this.LOG_FREQUENCY === 0 ||
             isLastMessage ||
             (received === Math.floor(expected / 2))) {
-            console.log(`📊 Progress for ${type} poolId: ${poolId} - ${received}/${expected} (${(expected > 0 ? (received / expected) * 100 : 0).toFixed(2)}%)`);
+            console.log(`📊 Progress of received messages for ${type} poolId: ${poolId} - ${received}/${expected} (${(expected > 0 ? (received / expected) * 100 : 0).toFixed(2)}%)`);
             // Update database with current count
             await this.updateDatabaseCounters(poolId, type, received);
         }

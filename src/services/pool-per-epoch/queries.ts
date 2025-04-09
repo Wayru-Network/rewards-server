@@ -27,11 +27,6 @@ export const createCurrentPoolPerEpoch = async (epochParams?: Partial<PoolPerEpo
         const lastEpochDateNumber = new Date().setDate(new Date().getDate() - 1)
         const lastEpochDate = new Date(lastEpochDateNumber)
         const formattedEpoch = moment(lastEpochDate).utc().format('YYYY-MM-DD')
-        // check if there is a epoch into pool per epoch with this last epoch date
-        const poolPerEpoch = await pool.query(`SELECT * FROM ${poolPerEpochTable} WHERE epoch = $1`, [formattedEpoch]);
-        if (poolPerEpoch?.rows?.length > 0) {
-            return poolPerEpoch.rows[0] as PoolPerEpoch
-        }
         const epochAmounts = await getPoolPerEpochAmounts(lastEpochDate)
         const wayruPoolUbi = Number(epochAmounts?.ubiAmount) / 1000000
         const wayruPoolUpi = Number(epochAmounts?.upiAmount) / 1000000
@@ -54,6 +49,16 @@ export const createCurrentPoolPerEpoch = async (epochParams?: Partial<PoolPerEpo
             wubi_messages_sent: epochParams?.wubi_messages_sent ?? 0,
             wupi_messages_sent: epochParams?.wupi_messages_sent ?? 0,
         }
+
+
+        // check if there is a epoch into pool per epoch with this last epoch date
+        const poolPerEpoch = await pool.query(`SELECT * FROM ${poolPerEpochTable} WHERE epoch = $1`, [formattedEpoch]);
+        if (poolPerEpoch?.rows?.length > 0) {
+            // update the pool per epoch
+            const updatedPoolPerEpoch = await updatePoolPerEpochById(poolPerEpoch.rows[0].id, epochData)
+            return updatedPoolPerEpoch as PoolPerEpoch
+        }
+       
 
         // insert into pool_per_epoch
         const result = await pool.query(`
