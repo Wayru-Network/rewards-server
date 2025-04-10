@@ -81,20 +81,19 @@ export const processRewardsBatch = async (
     const { rewards, networkScore, totalRewardsAmount } = params;
     const updateQueries = rewards
         .map(reward => {
-            const proportionalShare = (reward.hotspot_score / networkScore) * totalRewardsAmount;
-            const amount = Number(roundDownTo6Decimals(proportionalShare / 1000000));
+            const proportionalShare = (Number(reward.hotspot_score) / Number(networkScore)) * Number(totalRewardsAmount);
             return {
                 text: `
                     UPDATE ${rewardsPerEpochTable}  
-                    SET amount = $1,
+                    SET amount = ${Number(roundDownTo6Decimals(proportionalShare / 1000000))},
                         status = 'ready-for-claim',
                         owner_payment_status = 'pending',
                         host_payment_status = 'pending',
-                        updated_at = $3
-                    WHERE id = $2
+                        updated_at = $2
+                    WHERE id = $1
                     AND status != 'ready-for-claim' 
                 `,
-                values: [amount, reward.id, new Date()]
+                values: [reward.id, new Date()]
             };
         });
 
