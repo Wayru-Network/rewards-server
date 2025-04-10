@@ -39,6 +39,12 @@ export const processWubiRabbitResponse = async (msg: ConsumeMessage) => {
 
         // Calculate multiplier
         const multiplier = isEligible ? getNfNodeMultiplier(nfnode) : 0;
+        if(nfnode?.model === 'Genesis' && multiplier !== 3) {
+            console.log('🚨 Genesis nfnode with multiplier not 3');
+            console.log('🚨 multiplier', multiplier);
+            console.log('🚨 nfnode', nfnode?.model);
+        }
+
 
         // Create rewards
         const reward = await createRewardsPerEpoch({
