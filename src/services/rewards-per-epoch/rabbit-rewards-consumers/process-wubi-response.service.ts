@@ -46,12 +46,12 @@ export const processWubiRabbitResponse = async (msg: ConsumeMessage) => {
         if(nfnode?.model === 'Genesis') {
             console.log('🚨 Genesis nfnode with multiplier:', multiplier);
             console.log('🚨 hotspot_score in props:', hotspot_score);
-            console.log('🚨 hotspot_score calculated:', hotspot_score ?? 0 * multiplier);
+            console.log('🚨 hotspot_score calculated:', (hotspot_score ?? 0) * multiplier);
         }
 
         // Create rewards
         const reward = await createRewardsPerEpoch({
-            hotspot_score: hotspot_score ?? 0 * multiplier,
+            hotspot_score: (hotspot_score ?? 0) * multiplier,
             nfnode: nfnode.id,
             pool_per_epoch: epochDocument.id,
             status: 'calculating',
