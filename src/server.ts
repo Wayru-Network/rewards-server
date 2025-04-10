@@ -35,10 +35,4 @@ bootstrap().catch(err => {
   console.error('🚨 Failed to start services:', err);
   shutdown(); // shutdown all services if error
   process.exit(1);
-}).then(() => {
-  // await 3 seconds
-  setTimeout(() => {
-    console.log('🚀 starting to process rewards');
-    initiateRewardsProcessing();
-  }, 3000);
 });
