@@ -6,6 +6,7 @@ import { dbErrorHandler } from "@middlewares/db-error-handler";
 import { ENV } from "@config/env/env";
 import { bootstrap } from "@bootstrap/bootstrap";
 import { shutdown } from "@bootstrap/shutdown";
+import { initiateRewardsProcessing } from "@services/rewards-per-epoch/rabbit-rewards-messages/initiate-rewards-processing.service";
 
 // start server app and services
 const app = new Koa();
@@ -34,4 +35,10 @@ bootstrap().catch(err => {
   console.error('🚨 Failed to start services:', err);
   shutdown(); // shutdown all services if error
   process.exit(1);
-})
+}).then(() => {
+  // await 3 seconds
+  setTimeout(() => {
+    console.log('🚀 starting to process rewards');
+    initiateRewardsProcessing();
+  }, 3000);
+});
