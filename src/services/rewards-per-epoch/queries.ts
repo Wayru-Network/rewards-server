@@ -83,12 +83,6 @@ export const processRewardsBatch = async (
         .map(reward => {
             const proportionalShare = (reward.hotspot_score / networkScore) * totalRewardsAmount;
             const amount = Number(roundDownTo6Decimals(proportionalShare / 1000000));
-            if (reward.hotspot_score === 3) {
-                console.log('proportionalShare:', proportionalShare)
-                console.log('networkScore', networkScore)
-                console.log('totalRewardsAmount:', totalRewardsAmount)
-                console.log('amount:', amount)
-            }
             return {
                 text: `
                     UPDATE ${rewardsPerEpochTable}  
