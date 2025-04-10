@@ -47,7 +47,7 @@ export const getNfNodeByWayruDeviceId = async (wayruDeviceId: string) => {
 
 export const getNFNodeById = async (id: number) => {
   const { rows } = await pool.query(`
-        SELECT id, wayru_device_id, model, solana_asset_id, FROM nfnodes WHERE id = $1
+        SELECT id, wayru_device_id, model, solana_asset_id FROM nfnodes WHERE id = $1
       `, [id])
   return rows[0] as Pick<NfNode, 'id' | 'wayru_device_id' | 'model' | 'solana_asset_id'>
 }
