@@ -227,9 +227,8 @@ export class PoolMessageTracker {
     clearCache(poolId: string) {
         this.messageCounters.delete(poolId);
         this.processedRewardIds.clear(); // Optional: clear processed IDs too
-        console.log(`✅ Message counters cleared for pool ${poolId}`);
+        console.log(`🧹 Message counters cleared for pool ${poolId}`);
     }
-
     // method to get active pools
     private async getActivePools(): Promise<PoolPerEpoch[]> {
         const activePools = await getActivePoolsQuery();
