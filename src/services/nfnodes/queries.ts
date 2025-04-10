@@ -39,15 +39,15 @@ export const getActiveWupiNfNodes = async () => {
 
 export const getNfNodeByWayruDeviceId = async (wayruDeviceId: string) => {
   const { rows } = await pool.query(`
-        SELECT * FROM nfnodes WHERE wayru_device_id = $1
+        SELECT id, wayru_device_id, model, solana_asset_id FROM nfnodes WHERE wayru_device_id = $1
       `, [wayruDeviceId])
   const document = rows?.length ? rows[0] : null
-  return document as NfNode
+  return document as Pick<NfNode, 'id' | 'wayru_device_id' | 'model' | 'solana_asset_id'>
 }
 
 export const getNFNodeById = async (id: number) => {
   const { rows } = await pool.query(`
-        SELECT * FROM nfnodes WHERE id = $1
+        SELECT id, wayru_device_id, model, solana_asset_id, FROM nfnodes WHERE id = $1
       `, [id])
-  return rows[0] as NfNode
+  return rows[0] as Pick<NfNode, 'id' | 'wayru_device_id' | 'model' | 'solana_asset_id'>
 }

@@ -5,7 +5,7 @@ import { RewardSystem } from "@interfaces/reward-system/reward-system"
 import { Program } from "@coral-xyz/anchor"
 import { ENV } from "@config/env/env"
 
-export const getNfNodeMultiplier = (nfnode: NfNode) => multipliers[nfnode?.model || ''] || 1
+export const getNfNodeMultiplier = (nfnode: Pick<NfNode, 'model'>) => multipliers[nfnode?.model || ''] || 1
 
 const multipliers: { [key: string]: number } = {
   BYOD: 1,
@@ -28,7 +28,7 @@ const ELIGIBILITY_CONFIG: Record<NFNodeRewardType, NFNodeEligibilityConfig> = {
 
 // Function to check if a node is eligible for rewards
 const checkNFNodeEligibility = async (
-    nfnode: NfNode | null,
+    nfnode: Pick<NfNode, 'id' | 'wayru_device_id' | 'model' | 'solana_asset_id'>,
     type: NFNodeRewardType,
     rewardSystemProgram: Program<RewardSystem> | null,
 ): Promise<{ isEligible: boolean; reason?: string }> => {
@@ -44,7 +44,7 @@ const checkNFNodeEligibility = async (
             return { isEligible: true };
         }
 
-        const nfnodeEntry = await getNFNodeEntry(nfnode.wayru_device_id, rewardSystemProgram);
+        const nfnodeEntry = await getNFNodeEntry(nfnode.solana_asset_id, rewardSystemProgram);
         if (!nfnodeEntry) {
             return { 
                 isEligible: false, 
@@ -76,7 +76,7 @@ const checkNFNodeEligibility = async (
 export const getEligibleWubiNFNodes = async (
     wayruDeviceId: string, 
     rewardSystemProgram: Program<RewardSystem> | null,
-): Promise<{ isEligible: boolean; nfnode: NfNode }> => {
+): Promise<{ isEligible: boolean; nfnode: Pick<NfNode, 'id' | 'wayru_device_id' | 'model' | 'solana_asset_id'> }> => {
     const nfnode = await getNfNodeByWayruDeviceId(wayruDeviceId);
     const { isEligible, reason } = await checkNFNodeEligibility(
         nfnode,
@@ -93,7 +93,7 @@ export const getEligibleWubiNFNodes = async (
 export const getEligibleWupiNFNodes = async (
     nfnodeId: number,
     rewardSystemProgram: Program<RewardSystem> | null
-): Promise<{ isEligible: boolean; nfnode: NfNode }> => {
+): Promise<{ isEligible: boolean; nfnode: Pick<NfNode, 'id' | 'wayru_device_id' | 'model' | 'solana_asset_id'> }> => {
     const nfnode = await getNFNodeById(nfnodeId);
     const { isEligible, reason } = await checkNFNodeEligibility(
         nfnode,
