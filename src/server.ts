@@ -8,7 +8,6 @@ import { bootstrap } from "@bootstrap/bootstrap";
 import { shutdown } from "@bootstrap/shutdown";
 import { initiateRewardsProcessing } from "@services/rewards-per-epoch/rabbit-rewards-messages/initiate-rewards-processing.service";
 
-
 // start server app and services
 const app = new Koa();
 

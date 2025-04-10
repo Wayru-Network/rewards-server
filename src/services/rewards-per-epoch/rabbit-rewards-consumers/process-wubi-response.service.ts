@@ -37,17 +37,7 @@ export const processWubiRabbitResponse = async (msg: ConsumeMessage) => {
             return
         }
 
-        // Calculate multiplier
-        if (!nfnode?.model) {
-            console.error('nfnode model not found for id', nfnode?.id);
-        }
         const multiplier = isEligible ? getNfNodeMultiplier(nfnode) : 0;
-
-        if(nfnode?.model === 'Genesis') {
-            console.log('🚨 Genesis nfnode with multiplier:', multiplier);
-            console.log('🚨 hotspot_score in props:', hotspot_score);
-            console.log('🚨 hotspot_score calculated:', (hotspot_score ?? 0) * multiplier);
-        }
 
         // Create rewards
         const reward = await createRewardsPerEpoch({
