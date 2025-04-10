@@ -40,7 +40,6 @@ export const processWubiRabbitResponse = async (msg: ConsumeMessage) => {
         // Calculate multiplier
         if (!nfnode?.model) {
             console.error('nfnode model not found for id', nfnode?.id);
-            return;
         }
         const multiplier = isEligible ? getNfNodeMultiplier(nfnode) : 0;
 
