@@ -108,6 +108,12 @@ export const initiateRewardsProcessing = async (poolId?: number):
                 console.log('❌ No epoch created, ending process');
                 return { error: true, message: 'No epoch created' };
             }
+
+            const totalPoolAmount = Number(epoch?.ubi_pool) + Number(epoch?.upi_pool);
+            if (totalPoolAmount === 0) {
+                console.log('⚠️ No pool amount found, ending process');
+                return { error: true, message: 'No pool amount found' };
+            }
             
             // Save in the global instance
             poolPerEpochInstance.saveInstance(epoch);
@@ -130,8 +136,12 @@ export const initiateRewardsProcessing = async (poolId?: number):
         });
         
         // Process nodes concurrently
-        processWUBIWithConcurrency(wubiNFNodes, epoch);
-        processWUPIWithConcurrency(wupiNFNodes, epoch);
+        if (epoch?.ubi_pool > 0) {
+            processWUBIWithConcurrency(wubiNFNodes, epoch);
+        }
+        if (epoch?.upi_pool > 0) {
+            processWUPIWithConcurrency(wupiNFNodes, epoch);
+        }
         
         return { error: false, epoch: epoch };
     } catch (error) {
