@@ -21,6 +21,7 @@
     "amqp-connection-manager": "^4.1.14",
     "amqplib": "^0.10.4",
     "axios": "^1.8.4",
+    "decimal.js": "^10.5.0",
     "dotenv": "^16.4.7",
     "koa": "^2.15.3",
     "koa-bodyparser": "^4.4.1",
@@ -37,8 +38,8 @@
     "@types/node": "^22.10.10",
     "@types/node-cron": "^3.0.11",
     "@types/pg": "^8.11.11",
+    "tsc-alias": "^1.8.10",
     "tsx": "^4.19.2",
-    "typescript": "^5.4.5",
-    "tsc-alias": "^1.8.10"
+    "typescript": "^5.4.5"
   }
 }

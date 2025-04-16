@@ -6,6 +6,7 @@ import { dbErrorHandler } from "@middlewares/db-error-handler";
 import { ENV } from "@config/env/env";
 import { bootstrap } from "@bootstrap/bootstrap";
 import { shutdown } from "@bootstrap/shutdown";
+import { testPoolPerEpochAmountMainnet } from "@services/pool-per-epoch/pool-per-epoch.service";
 
 // start server app and services
 const app = new Koa();
@@ -34,4 +35,9 @@ bootstrap().catch(err => {
   console.error('🚨 Failed to start services:', err);
   shutdown(); // shutdown all services if error
   process.exit(1);
+}).then(async () => {
+  // await 3 seconds
+  await new Promise(resolve => setTimeout(resolve, 3000));
+  console.log('🚀 starting to calculate pool per epoches amount');
+  testPoolPerEpochAmountMainnet()
 })
