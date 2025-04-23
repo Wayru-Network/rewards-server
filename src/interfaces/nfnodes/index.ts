@@ -34,10 +34,6 @@ export type WupiNFNodes = Pick<NfNode, 'id' | 'mac' | 'nas_id'>
 
 
 export type NFNodeEntryDetails = {
-    ownerDetails: {
-        lastClaimedTimestamp: number;
-        address: string;
-    };
     hostDetails: {
         address: string;
         profitPercentage: number;

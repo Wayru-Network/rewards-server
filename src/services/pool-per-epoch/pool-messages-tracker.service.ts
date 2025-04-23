@@ -10,7 +10,7 @@ export class PoolMessageTracker {
     }> = new Map();
 
     // Set to keep track of processed rewards
-    private processedRewardIds = new Set<number>();
+    private processedRewardIds = new Set<string>();
 
     private LOG_FREQUENCY = 50;
     private isInitialized = false;
@@ -131,8 +131,8 @@ export class PoolMessageTracker {
         }
 
         // Check if we have already processed this reward
-        if (this.processedRewardIds.has(rewardId)) {
-            console.log(`⚠️ Duplicate message detected: reward ${rewardId} already processed`);
+        if (this.processedRewardIds.has(`${type}-${rewardId}`)) {
+            console.log(`⚠️ Duplicate message detected: reward ${rewardId} for type ${type} already processed`);
 
             // Return the current progress without incrementing
             const received = counters[type].received;
@@ -149,7 +149,7 @@ export class PoolMessageTracker {
         }
 
         // Mark as processed
-        this.processedRewardIds.add(rewardId);
+        this.processedRewardIds.add(`${type}-${rewardId}`);
 
         // Increment counter (only for new rewards)
         counters[type].received++;

@@ -37,31 +37,37 @@ export const processWubiRabbitResponse = async (msg: ConsumeMessage) => {
             return
         }
 
-        const multiplier = isEligible ? getNfNodeMultiplier(nfnode) : 0;
+        // Calculate multiplier
+        const multiplier = getNfNodeMultiplier(nfnode)
+        // Create rewards if eligible and hotspot score is greater than 0
+        // because we don't need to create rewards with a 0 hotspot score
+        const hotspot_score_multiplied = (hotspot_score ?? 0) * multiplier
+        if (isEligible && hotspot_score_multiplied > 0) {
+            // Create rewards
+            const reward = await createRewardsPerEpoch({
+                hotspot_score: hotspot_score_multiplied,
+                nfnode: nfnode.id,
+                pool_per_epoch: epochDocument.id,
+                status: 'calculating',
+                type: 'wUBI',
+                amount: 0,
+                currency: 'WAYRU',
+                owner_payment_status: 'pending',
+                host_payment_status: 'pending',
+            });
 
-        // Create rewards
-        const reward = await createRewardsPerEpoch({
-            hotspot_score: (hotspot_score ?? 0) * multiplier,
-            nfnode: nfnode.id,
-            pool_per_epoch: epochDocument.id,
-            status: 'calculating',
-            type: 'wUBI',
-            amount: 0,
-            currency: 'WAYRU',
-            owner_payment_status: 'pending',
-            host_payment_status: 'pending',
-        });
-
-        if (!reward) {
-            console.error('error creating rewards per epoch');
-            throw new Error('error creating rewards per epoch');
+            // confirm reward was created
+            if (!reward) {
+                console.error('error creating rewards per epoch');
+                throw new Error('error creating rewards per epoch');
+            }
         }
 
         // Track message with the reward id
         const { isLastMessage } = await poolMessageTracker.trackMessage(
-            epochDocument?.id, 
+            epochDocument?.id,
             'wubi',
-            reward.id
+            nfnode.id
         );
 
         // update the pool per epoch

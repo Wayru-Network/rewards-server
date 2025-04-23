@@ -21,45 +21,48 @@ export const processWupiRabbitResponse = async (msg: ConsumeMessage) => {
         const rewardSystemProgram = await RewardSystemManager.getInstance();
 
         // Get eligible nfnode
-        const {isEligible, nfnode} = await getEligibleWupiNFNodes(nfnode_id, rewardSystemProgram);
-
-        // Calculate multiplier
-        const multiplier = isEligible ? getNfNodeMultiplier(nfnode) : 0;
+        const { isEligible, nfnode } = await getEligibleWupiNFNodes(nfnode_id, rewardSystemProgram);
 
         // Get epoch document
         const epochDocument = await poolPerEpochInstance.getByEpoch(epoch);
-
         if (!epochDocument) {
             console.error('epoch not found');
             return
         }
 
+        // Calculate multiplier
+        const multiplier = getNfNodeMultiplier(nfnode)
         // Calculate score
         const scoreInGb = Number(BigInt(score)) / 1000000000;
+        const hotspot_score = Number((scoreInGb > 0 ? scoreInGb * multiplier : 0).toFixed(6))
 
-        // Create rewards
-        const reward = await createRewardsPerEpoch({
-            hotspot_score: Number((scoreInGb > 0 ? scoreInGb * multiplier : 0).toFixed(6)),
-            nfnode: nfnode_id,
-            pool_per_epoch: epochDocument.id,
-            status: 'calculating',
-            type: 'wUPI',
-            amount: 0,
-            currency: 'WAYRU',
-            owner_payment_status: 'pending',
-            host_payment_status: 'pending',
-        });
+        // Create rewards if eligible and hotspot score is greater than 0
+        // because we don't need to create rewards with a 0 hotspot score
+        if (isEligible && hotspot_score > 0) {
+            // Create rewards
+            const reward = await createRewardsPerEpoch({
+                hotspot_score,
+                nfnode: nfnode_id,
+                pool_per_epoch: epochDocument.id,
+                status: 'calculating',
+                type: 'wUPI',
+                amount: 0,
+                currency: 'WAYRU',
+                owner_payment_status: 'pending',
+                host_payment_status: 'pending',
+            });
 
-        if (!reward) {
-            console.error('error creating rewards per epoch');
-            throw new Error('error creating rewards per epoch'); // throw error to be handled by the wrapper
+            if (!reward) {
+                console.error('error creating rewards per epoch');
+                throw new Error('error creating rewards per epoch'); // throw error to be handled by the wrapper
+            }
         }
 
         // Track message
-        const { isLastMessage } = await poolMessageTracker.trackMessage(epochDocument.id, 'wupi', reward.id);
+        const { isLastMessage } = await poolMessageTracker.trackMessage(epochDocument.id, 'wupi', nfnode_id);
 
         // update the pool per epoch
-       if (isLastMessage) {
+        if (isLastMessage) {
             eventHub.emit(EventName.LAST_REWARD_CREATED, {
                 epochId: epochDocument.id,
                 type: 'wUPI'
