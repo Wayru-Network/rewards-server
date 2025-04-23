@@ -39,7 +39,6 @@ const validateWayruOsLicense = async (nfnodeEntry: NFNodeEntryDetails, nfnodeId:
     if (nfnodeType && 'byod' in nfnodeType) {
         const license = await getWayruOsLicenseByNFNodeId(nfnodeId);
         if (!license) {
-            console.log('No license found', 'nfnode id', nfnodeId);
             return {
                 isValidLicense: false,
                 reason: 'No license found'
