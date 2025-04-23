@@ -1,5 +1,5 @@
 import pool from "@config/db"
-import { NfNode, WubiNFNodes, WupiNFNodes } from "@interfaces/nfnodes"
+import { NfNode, NfNodeWayruOsLicense, WubiNFNodes, WupiNFNodes } from "@interfaces/nfnodes"
 
 /**
  * Get all active wubi nf nodes for mainnet
@@ -46,4 +46,19 @@ export const getNFNodeById = async (id: number) => {
         SELECT id, wayru_device_id, model, solana_asset_id FROM nfnodes WHERE id = $1
       `, [id])
   return rows[0] as Pick<NfNode, 'id' | 'wayru_device_id' | 'model' | 'solana_asset_id'>
+}
+
+
+export const getWayruOsLicenseByNFNodeId = async (nfnodeId: number) => {
+  const { rows } = await pool.query(`
+    SELECT l.*
+    FROM wayru_os_licenses l
+    JOIN wayru_os_licenses_nfnode_links ln ON l.id = ln.wayru_os_license_id
+    WHERE ln.nfnode_id = $1
+    ORDER BY l.id DESC
+    LIMIT 1
+  `, [nfnodeId]);
+
+  const document = rows?.length > 0 ? rows[0] : null
+  return document as NfNodeWayruOsLicense | null
 }

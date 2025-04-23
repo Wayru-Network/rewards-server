@@ -1,9 +1,10 @@
 import { NfNode, NFNodeEntryDetails } from "@interfaces/nfnodes"
-import { getNFNodeById, getNfNodeByWayruDeviceId } from "./queries"
+import { getNFNodeById, getNfNodeByWayruDeviceId, getWayruOsLicenseByNFNodeId } from "./queries"
 import { getNFNodeEntry } from "@services/solana/reward-system/reward-system.service"
 import { RewardSystem } from "@interfaces/reward-system/reward-system"
 import { Program } from "@coral-xyz/anchor"
 import { ENV } from "@config/env/env"
+import moment from "moment"
 
 export const getNfNodeMultiplier = (nfnode: Pick<NfNode, 'model'>) => multipliers[nfnode?.model || ''] || 1
 
@@ -32,7 +33,42 @@ const validateDepositAmount = (nfnodeEntry: NFNodeEntryDetails) => {
     }
 }
 
-// Function to check if a node is eligible for rewards
+const validateWayruOsLicense = async (nfnodeEntry: NFNodeEntryDetails, nfnodeId: number) => {
+    const nfnodeType = nfnodeEntry?.nfnodeDetails?.type;
+    // if the node is a byod, we need to check if has a active license
+    if (nfnodeType && 'byod' in nfnodeType) {
+        const license = await getWayruOsLicenseByNFNodeId(nfnodeId);
+        if (!license) {
+            console.log('No license found', 'nfnode id', nfnodeId);
+            return {
+                isValidLicense: false,
+                reason: 'No license found'
+            }
+        }
+        // unix pay stamp test:
+        const unixpaystamp = license.unixpaystamp;
+
+        // Calculate the expiration date by adding the license days
+        const expirationDate = moment.unix(unixpaystamp).add(license.days, 'days');
+        // Check if the license has expired
+        const isExpired = !moment().isBefore(expirationDate);
+        if (isExpired) {
+            return {
+                isValidLicense: false,
+                reason: 'License expired for nfnode id: ' + nfnodeId
+            }
+        }
+
+        return {
+            isValidLicense: true,
+            reason: 'License is valid for nfnode id: ' + nfnodeId
+        }
+    }
+    return {
+        isValidLicense: true,
+        reason: 'License is valid'
+    }
+}
 const checkNFNodeEligibility = async (
     nfnode: Pick<NfNode, 'id' | 'wayru_device_id' | 'model' | 'solana_asset_id'>,
     rewardSystemProgram: Program<RewardSystem> | null,
@@ -57,15 +93,25 @@ const checkNFNodeEligibility = async (
             };
         }
 
-        const { isValidDeposit, reason } = validateDepositAmount(nfnodeEntry);
-
+        // validate deposit amount
+        const { isValidDeposit, reason: depositReason } = validateDepositAmount(nfnodeEntry);
         if (!isValidDeposit) {
             return {
                 isEligible: false,
-                reason: reason
+                reason: depositReason
             };
         }
 
+        // validate wayru os license
+        const { isValidLicense, reason: licenseReason } = await validateWayruOsLicense(nfnodeEntry, nfnode.id);
+        if (!isValidLicense) {
+            return {
+                isEligible: false,
+                reason: licenseReason
+            };
+        }
+
+        // nfnode is eligible
         return { isEligible: true };
     } catch (error) {
         console.log(`Error checking ${nfnode.wayru_device_id} eligibility:`, error);

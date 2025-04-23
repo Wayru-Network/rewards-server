@@ -78,15 +78,6 @@ export class PoolMessageTracker {
             wubi: { received: wubiReceived },
             wupi: { received: wupiReceived }
         });
-
-        console.log(`Counters initialized for pool ${poolId}:`, {
-            wubi_received: wubiReceived,
-            wupi_received: wupiReceived,
-            from_database: {
-                wubi: pool.wubi_messages_received !== null,
-                wupi: pool.wupi_messages_received !== null
-            }
-        });
     }
 
     private async updateDatabaseCounters(poolId: number, type: 'wubi' | 'wupi', current: number) {
