@@ -117,15 +117,15 @@ export const getPoolPerEpochAmount = (epochNumber: number) => {
         return BigInt(0)
     }
     if (epochNumber === 1) {
-        return BigInt(1200000000000)
+        return BigInt(120000000000000)
     } else if (epochNumber === 36525) {
-        return BigInt(70630713)
+        return BigInt(7063071300)
     } else if (epochNumber > 36525) {
         return BigInt(0)
     }
 
     const reductionPercentage = 0.999733349023419
-    return BigInt((1200000000000 * Math.pow(Number(reductionPercentage), epochNumber - 1)).toFixed(0))
+    return BigInt((120000000000000 * Math.pow(Number(reductionPercentage), epochNumber - 1)).toFixed(0))
 }
 
 export const getPoolPerEpochAmountsMainnet = async (epochDate: Date) => {
@@ -175,24 +175,25 @@ export const testPoolPerEpochAmountMainnet = async () => {
     // Function to format large numbers
     const formatNumber = (num: bigint) => {
         // Divide by 1,000,000 to get the correct representation
-        const numValue = Number(num) / 1000000;
-        return numValue.toLocaleString('en-US', {
-            minimumFractionDigits: 6,
-            maximumFractionDigits: 6
-        });
+        const numValue = Number(num) / 100000000;
+        return numValue.toFixed(6)
+        // return numValue.toLocaleString('en-US', {
+        //     minimumFractionDigits: 6,
+        //     maximumFractionDigits: 6
+        // });
     };
     
     // Total for verification
-    let totalEmissionSum: bigint = BigInt(0);
-    let totalHotspotsSum: bigint = BigInt(0);
-    let totalManufacturersSum: bigint = BigInt(0);
-    let totalOraclesSum: bigint = BigInt(0);
+    let totalEmissionSum: number = 0;
+    let totalHotspotsSum: number = 0;
+    let totalManufacturersSum: number = 0;
+    let totalOraclesSum: number = 0;
     const startEpoch = 1;        // From the first epoch
     const endEpoch = 36525;      // Until the last
     
     console.log(`Calculating total emission from epoch ${startEpoch} to ${endEpoch}...`);
     
-    let counter = 0;
+    let counter = 0;let results=[];
     
     for (let i = startEpoch; i <= endEpoch;) {
         // Calculate the epoch number
@@ -238,13 +239,13 @@ export const testPoolPerEpochAmountMainnet = async () => {
         };
         
         // For this specific test, we do not save in the array to avoid memory
-        //results.push(readableAmounts);
+        results.push(readableAmounts);
         
         // Add directly the numeric value without formatting to avoid NaN
-        const emissionToAdd = amounts.totalEmissionAmount
-        const hotspotsToAdd = amounts.hotspotsAmount
-        const manufacturersToAdd = amounts.manufacturersAmount
-        const oraclesToAdd = amounts.oraclesAmount
+        const emissionToAdd = Number(readableAmounts.totalEmission.formatted)
+        const hotspotsToAdd = Number(readableAmounts.hotspots.formatted)
+        const manufacturersToAdd = Number(readableAmounts.manufacturers.formatted)
+        const oraclesToAdd = Number(readableAmounts.oracles.formatted)
         
         
         totalEmissionSum += emissionToAdd;
@@ -255,47 +256,47 @@ export const testPoolPerEpochAmountMainnet = async () => {
         // Show progress every 1000 epochs
         counter++;
         if (counter % 1000 === 0 || epochNumber === endEpoch) {
-            console.log(`Processed ${counter} epochs. Current total: ${Number(totalEmissionSum) / 1000000}`);
+            console.log(`Processed ${counter} epochs. Current total: ${totalEmissionSum}`);
         }
         
         i++;
     }
 
-    const emissionExpectedTotal = 4500000000.000000;
-    const hotspotsExpectedTotal = Number('3,564,000,000.000000'.replace(/,/g, '')); // 79.20% of the emission
-    const manufacturersExpectedTotal = Number('36,000,000.000000'.replace(/,/g, '')); // 0.80% of the emission
-    const oraclesExpectedTotal = Number('900,000,000.000000'.replace(/,/g, '')); // 20.00% of the emission
+    const emissionExpectedTotal = 4500000000.00000000;
+    const hotspotsExpectedTotal = Number('3,564,000,000.00000000'.replace(/,/g, '')); // 79.20% of the emission
+    const manufacturersExpectedTotal = Number('36,000,000.00000000'.replace(/,/g, '')); // 0.80% of the emission
+    const oraclesExpectedTotal = Number('900,000,000.00000000'.replace(/,/g, '')); // 20.00% of the emission
     
     console.log('***************** ----- Emissions results ------- *****************');
-    const emissionSumNumber = Number(totalEmissionSum) / 1000000;
-    console.log(`Total emission sum: ${emissionSumNumber.toFixed(6)}`);
-    console.log(`Expected total: ${emissionExpectedTotal.toFixed(6)}`);
+    const emissionSumNumber = totalEmissionSum;
+    console.log(`Total emission sum: ${emissionSumNumber.toFixed(8)}`);
+    console.log(`Expected total: ${emissionExpectedTotal.toFixed(8)}`);
     const emissionDifference = emissionExpectedTotal - emissionSumNumber;
-    console.log(`Difference: ${(emissionDifference).toFixed(6)}`);
+    console.log(`Difference: ${(emissionDifference).toFixed(8)}`);
     console.log('***************** ----- hotspots results ------- *****************');
-    const hotspotsSumNumber = Number(totalHotspotsSum) / 1000000;
-    console.log(`Total hotspots sum: ${hotspotsSumNumber.toFixed(6)}`);
-    console.log(`Expected total: ${hotspotsExpectedTotal.toFixed(6)}`);
+    const hotspotsSumNumber = totalHotspotsSum;
+    console.log(`Total hotspots sum: ${hotspotsSumNumber.toFixed(8)}`);
+    console.log(`Expected total: ${hotspotsExpectedTotal.toFixed(8)}`);
     const hotspotsDifference = hotspotsExpectedTotal - hotspotsSumNumber;
-    console.log(`Difference: ${(hotspotsDifference).toFixed(6)}`);
+    console.log(`Difference: ${(hotspotsDifference).toFixed(8)}`);
     console.log('***************** ----- manufacturers results ------- *****************');
-    const manufacturersSumNumber = Number(totalManufacturersSum) / 1000000;
-    console.log(`Total manufacturers sum: ${manufacturersSumNumber.toFixed(6)}`);
-    console.log(`Expected total: ${manufacturersExpectedTotal.toFixed(6)}`);
+    const manufacturersSumNumber = totalManufacturersSum;
+    console.log(`Total manufacturers sum: ${manufacturersSumNumber.toFixed(8)}`);
+    console.log(`Expected total: ${manufacturersExpectedTotal.toFixed(8)}`);
     const manufacturersDifference = manufacturersExpectedTotal - manufacturersSumNumber;
-    console.log(`Difference: ${(manufacturersDifference).toFixed(6)}`);
+    console.log(`Difference: ${(manufacturersDifference).toFixed(8)}`);
     console.log('***************** ----- oracles results ------- *****************');
-    const oraclesSumNumber = Number(totalOraclesSum) / 1000000;
-    console.log(`Total oracles sum: ${oraclesSumNumber.toFixed(6)}`);
-    console.log(`Expected total: ${oraclesExpectedTotal.toFixed(6)}`);
+    const oraclesSumNumber = totalOraclesSum;
+    console.log(`Total oracles sum: ${oraclesSumNumber.toFixed(8)}`);
+    console.log(`Expected total: ${oraclesExpectedTotal.toFixed(8)}`);
     const oraclesDifference = oraclesExpectedTotal - oraclesSumNumber;
-    console.log(`Difference: ${(oraclesDifference).toFixed(6)}`);
+    console.log(`Difference: ${(oraclesDifference).toFixed(8)}`);
 
     // do not save the results in a JSON file because it's too big
     // Save in a JSON file
-    //const fs = require('fs');
-    //const outputPath = 'pool_amounts_test.json';
-    //fs.writeFileSync(outputPath, JSON.stringify(results, null, 2));
+    const fs = require('fs');
+    const outputPath = 'pool_amounts_test.json';
+    fs.writeFileSync(outputPath, JSON.stringify(results, null, 2));
     //console.log(`Results saved to ${outputPath}`);
     
     
