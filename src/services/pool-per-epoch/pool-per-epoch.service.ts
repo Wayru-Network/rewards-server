@@ -276,22 +276,22 @@ export const testPoolPerEpochAmountMainnet = async () => {
     console.log('***************** ----- Emissions results ------- *****************');
     console.log(`Total emission sum: ${totalEmissionSum.toFixed(6)}`);
     console.log(`Expected total: ${emissionExpectedTotal.toFixed(6)}`);
-    const emissionDifference = totalEmissionSum - emissionExpectedTotal;
+    const emissionDifference = emissionExpectedTotal - totalEmissionSum;
     console.log(`Difference: ${(emissionDifference).toFixed(6)}`);
     console.log('***************** ----- hotspots results ------- *****************');
     console.log(`Total hotspots sum: ${totalHotspotsSum.toFixed(6)}`);
     console.log(`Expected total: ${hotspotsExpectedTotal.toFixed(6)}`);
-    const hotspotsDifference = totalHotspotsSum - hotspotsExpectedTotal;
+    const hotspotsDifference = hotspotsExpectedTotal - totalHotspotsSum;
     console.log(`Difference: ${(hotspotsDifference).toFixed(6)}`);
     console.log('***************** ----- manufacturers results ------- *****************');
     console.log(`Total manufacturers sum: ${totalManufacturersSum.toFixed(6)}`);
     console.log(`Expected total: ${manufacturersExpectedTotal.toFixed(6)}`);
-    const manufacturersDifference = totalManufacturersSum - manufacturersExpectedTotal;
+    const manufacturersDifference = manufacturersExpectedTotal - totalManufacturersSum;
     console.log(`Difference: ${(manufacturersDifference).toFixed(6)}`);
     console.log('***************** ----- oracles results ------- *****************');
     console.log(`Total oracles sum: ${totalOraclesSum.toFixed(6)}`);
     console.log(`Expected total: ${oraclesExpectedTotal.toFixed(6)}`);
-    const oraclesDifference = totalOraclesSum - oraclesExpectedTotal;
+    const oraclesDifference = oraclesExpectedTotal - totalOraclesSum;
     console.log(`Difference: ${(oraclesDifference).toFixed(6)}`);
 
     // do not save the results in a JSON file because it's too big
