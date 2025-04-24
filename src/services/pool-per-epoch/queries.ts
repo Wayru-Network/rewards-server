@@ -24,22 +24,22 @@ export const getPoolPerEpochById = async (epochId: number): Promise<PoolPerEpoch
 
 export const createCurrentPoolPerEpoch = async (epochParams?: Partial<PoolPerEpochEntry>): Promise<PoolPerEpoch | null> => {
     try {
+        // Simulate date of 01 may 2025
         const lastEpochDateNumber = new Date().setDate(new Date().getDate() - 1)
         const lastEpochDate = new Date(lastEpochDateNumber)
         const formattedEpoch = moment(lastEpochDate).utc().format('YYYY-MM-DD')
-        const epochAmounts = await getPoolPerEpochAmountsMainnet(lastEpochDate)
-        const wayruPoolUbi = Number(epochAmounts?.ubiAmount) / 1000000
-        const wayruPoolUpi = Number(epochAmounts?.upiAmount) / 1000000
+        const { ubiAmount, upiAmount, hotspotsAmount, epochNumber } = await getPoolPerEpochAmountsMainnet(lastEpochDate)
+        const wayruPoolUbi = formatPoolNumber(ubiAmount).numValue
+        const wayruPoolUpi = formatPoolNumber(upiAmount).numValue
         const wubi_processing_status = wayruPoolUbi > 0 ? 'sending_messages' : 'messages_not_sent'
         const wupi_processing_status = wayruPoolUpi > 0 ? 'sending_messages' : 'messages_not_sent'
         const wubi_error_message = wayruPoolUbi > 0 ? '' : 'Pool amount is 0'
         const wupi_error_message = wayruPoolUpi > 0 ? '' : 'Pool amount is 0'
 
-
         const epochData: PoolPerEpochEntry = {
             epoch: lastEpochDate,
-            ubi_pool: wayruPoolUbi,
-            upi_pool: wayruPoolUpi,
+            ubi_pool: Number(wayruPoolUbi.toFixed(6)),
+            upi_pool: Number(wayruPoolUpi.toFixed(6)),
             network_score: epochParams?.network_score ?? 0,
             network_score_upi: epochParams?.network_score_upi ?? 0,
             wubi_nfnodes_with_score: epochParams?.wubi_nfnodes_with_score ?? 0,
@@ -54,7 +54,9 @@ export const createCurrentPoolPerEpoch = async (epochParams?: Partial<PoolPerEpo
             wupi_messages_received: epochParams?.wupi_messages_received ?? 0,
             wubi_messages_sent: epochParams?.wubi_messages_sent ?? 0,
             wupi_messages_sent: epochParams?.wupi_messages_sent ?? 0,
-            total_hotspot_pool: epochParams?.total_hotspot_pool ?? formatPoolNumber(epochAmounts?.hotspotsAmount).numValue,
+            total_hotspot_pool: epochParams?.total_hotspot_pool ?? 
+            Number(formatPoolNumber(hotspotsAmount).formatted),
+            epoch_number: epochNumber
         }
 
 
@@ -65,7 +67,7 @@ export const createCurrentPoolPerEpoch = async (epochParams?: Partial<PoolPerEpo
             const updatedPoolPerEpoch = await updatePoolPerEpochById(poolPerEpoch.rows[0].id, epochData)
             return updatedPoolPerEpoch as PoolPerEpoch
         }
-       
+
 
         // insert into pool_per_epoch
         const result = await pool.query(`
@@ -97,8 +99,9 @@ export const createCurrentPoolPerEpoch = async (epochParams?: Partial<PoolPerEpo
                 wupi_error_message,
 
                 -- Total hotspot pool
-                total_hotspot_pool
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19) 
+                total_hotspot_pool,
+                epoch_number
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20) 
             RETURNING *`,
             [
                 // Basic dates and pools
@@ -126,7 +129,8 @@ export const createCurrentPoolPerEpoch = async (epochParams?: Partial<PoolPerEpo
                 epochData.wupi_messages_sent,
                 epochData.wupi_processing_status,
                 epochData.wupi_error_message,
-                epochData.total_hotspot_pool
+                epochData.total_hotspot_pool,
+                epochData.epoch_number
             ]
         );
 
@@ -140,7 +144,7 @@ export const createCurrentPoolPerEpoch = async (epochParams?: Partial<PoolPerEpo
 
 export const getPoolPerEpochNumber = async (targetDate: Date) => {
     try {
-        const startDate =  '2025-04-30T00:00:00Z' // first day of the mainnet
+        const startDate = '2025-04-30T00:00:00Z' // first day of the mainnet
         const start = new Date(startDate).valueOf()
         console.log('targetDate', targetDate)
         const target = new Date(targetDate).valueOf()
@@ -244,8 +248,8 @@ export const getActivePools = async () => {
         const pools = rows?.length > 0 ? rows : []
 
         // verify if the messages received are correct
-        for (const pool of pools) {         
-               const rewardsCount = await countRewardsPerEpochByPoolId(pool.id)
+        for (const pool of pools) {
+            const rewardsCount = await countRewardsPerEpochByPoolId(pool.id)
 
             const wubi_messages_received = Number(pool.wubi_messages_received ?? 0)
             const wupi_messages_received = Number(pool.wupi_messages_received ?? 0)

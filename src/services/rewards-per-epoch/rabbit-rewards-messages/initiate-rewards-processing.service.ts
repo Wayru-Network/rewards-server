@@ -137,10 +137,10 @@ export const initiateRewardsProcessing = async (poolId?: number):
         
         // Process nodes concurrently
         if (epoch?.ubi_pool > 0) {
-            //processWUBIWithConcurrency(wubiNFNodes, epoch); @TODO: remove this comment
+            processWUBIWithConcurrency(wubiNFNodes, epoch);
         }
         if (epoch?.upi_pool > 0) {
-            //processWUPIWithConcurrency(wupiNFNodes, epoch); @TODO: remove this comment
+            processWUPIWithConcurrency(wupiNFNodes, epoch);
         }
         
         return { error: false, epoch: epoch };

@@ -105,7 +105,15 @@ export const getPoolPerEpochAmountsMainnet = async (epochDate: Date) => {
     const ubiAmount = ((totalForHotspotsAndManufacturers) * BigInt(ubiPoolPercentage)) / BigInt(100)
 
 
-    return { oraclesAmount, manufacturersAmount, hotspotsAmount, upiAmount, ubiAmount, totalEmissionAmount }
+    return {
+        oraclesAmount,
+        manufacturersAmount,
+        hotspotsAmount,
+        upiAmount,
+        ubiAmount,
+        totalEmissionAmount,
+        epochNumber
+    }
 }
 
 export const getPoolPerEpochByEpoch = async (epoch: Date) => {
