@@ -33,6 +33,7 @@ export const getNFNodeEntry = async (solanaAssetId: string, program: Program<Rew
         };
         return formattedEntry;
     } catch (error) {
+        console.error('❌ Error getting NFNode entry:', error);
         return undefined
     }
 }
