@@ -5,7 +5,7 @@ import { eventHub } from "@services/events/event-hub";
 import { updatePoolNetworkScore, updatePoolPerEpochById } from "../queries";
 import { processRewardsBatch } from "@services/rewards-per-epoch/queries";
 import { BATCH_SIZE_REWARDS } from "@constants";
-import { getPoolPerEpochAmounts } from "../pool-per-epoch.service";
+import { getPoolPerEpochAmountsMainnet } from "../pool-per-epoch.service";
 import { sumAllNetworkScoresQuery } from "@services/rewards-per-epoch/helpers";
 
 export class NetworkScoreCalculator {
@@ -91,7 +91,7 @@ export class NetworkScoreCalculator {
             // Update epoch with network scores
             const {epoch, rewards} = await updatePoolNetworkScore(epochId, networkScore, type);
 
-            const totalRewards = await getPoolPerEpochAmounts(epoch.epoch)
+            const totalRewards = await getPoolPerEpochAmountsMainnet(epoch.epoch)
             if (!totalRewards) {
                 throw new Error('Total rewards not found');
             }

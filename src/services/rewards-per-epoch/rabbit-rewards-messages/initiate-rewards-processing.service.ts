@@ -59,6 +59,14 @@ export const initiateRewardsProcessing = async (poolId?: number):
             const updateData = {
                 wubi_processing_status: 'sending_messages',
                 wupi_processing_status: 'sending_messages',
+                wubi_nfnodes_total: wubiNFNodes.length,
+                wupi_nfnodes_total: wupiNFNodes.length,
+                wubi_messages_sent: 0,
+                wupi_messages_sent: 0,
+                wubi_messages_received: 0,
+                wupi_messages_received: 0,
+                network_score: 0,
+                network_score_upi: 0,
                 processing_metrics: {
                     ...epoch.processing_metrics,
                     startTime: startTime,
@@ -66,29 +74,7 @@ export const initiateRewardsProcessing = async (poolId?: number):
                     totalWupiNFNodes: wupiNFNodes.length
                 }
             } as Partial<PoolPerEpochEntry>
-            
-            // If the total of nodes changed, update those fields also
-            if (wubiNFNodes.length !== Number(epoch.wubi_nfnodes_total) || 
-                wupiNFNodes.length !== Number(epoch.wupi_nfnodes_total)) {
-                Object.assign(updateData, {
-                    wubi_nfnodes_total: wubiNFNodes.length,
-                    wupi_nfnodes_total: wupiNFNodes.length,
-                    wubi_messages_sent: 0,
-                    wupi_messages_sent: 0,
-                    wubi_messages_received: 0,
-                    wupi_messages_received: 0,
-                });
-            }
-            
-            // If there is a score, reset it
-            const totalScore = Number(epoch.network_score || 0) + Number(epoch.network_score_upi || 0);
-            if (totalScore > 0) {
-                Object.assign(updateData, {
-                    network_score: 0,
-                    network_score_upi: 0,
-                });
-            }
-            
+             
             // make a single update to the database
             const updatedEpoch = await updatePoolPerEpochById(poolId, updateData);
             if (!updatedEpoch) {
@@ -122,6 +108,12 @@ export const initiateRewardsProcessing = async (poolId?: number):
                 console.log('❌ No epoch created, ending process');
                 return { error: true, message: 'No epoch created' };
             }
+
+            const totalPoolAmount = Number(epoch?.ubi_pool) + Number(epoch?.upi_pool);
+            if (totalPoolAmount === 0) {
+                console.log('⚠️ No pool amount found, ending process');
+                return { error: true, message: 'No pool amount found' };
+            }
             
             // Save in the global instance
             poolPerEpochInstance.saveInstance(epoch);
@@ -144,8 +136,12 @@ export const initiateRewardsProcessing = async (poolId?: number):
         });
         
         // Process nodes concurrently
-        processWUBIWithConcurrency(wubiNFNodes, epoch);
-        processWUPIWithConcurrency(wupiNFNodes, epoch);
+        if (epoch?.ubi_pool > 0) {
+            processWUBIWithConcurrency(wubiNFNodes, epoch);
+        }
+        if (epoch?.upi_pool > 0) {
+            processWUPIWithConcurrency(wupiNFNodes, epoch);
+        }
         
         return { error: false, epoch: epoch };
     } catch (error) {

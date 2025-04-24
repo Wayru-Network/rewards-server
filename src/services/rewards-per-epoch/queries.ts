@@ -16,12 +16,12 @@ export const createRewardsPerEpoch = async (payload: RewardPerEpochEntry) => {
         await client.query('BEGIN');
 
         // a nfnode can have only one reward per epoch with the same type and pool_per_epoch
-        const {rows} = await client.query(checkExistingRewardQuery(nfnode, type, pool_per_epoch));
+        const { rows } = await client.query(checkExistingRewardQuery(nfnode, type, pool_per_epoch));
         const existDocument = rows?.length > 0 ? rows[0] : null as RewardPerEpoch['id'] | null;
         if (existDocument) {
-           return existDocument;
+            return existDocument;
         }
-        
+
         const insertResult = await client.query(`
             INSERT INTO ${rewardsPerEpochTable} 
             (type, hotspot_score, amount, owner_payment_status, host_payment_status, status, currency, created_at)

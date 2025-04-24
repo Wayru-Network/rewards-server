@@ -7,7 +7,6 @@ import { ENV } from "@config/env/env";
 import { bootstrap } from "@bootstrap/bootstrap";
 import { shutdown } from "@bootstrap/shutdown";
 
-
 // start server app and services
 const app = new Koa();
 

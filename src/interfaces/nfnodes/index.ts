@@ -32,12 +32,15 @@ export type NfNodeEntry = Omit<NfNode, 'id'>
 export type WubiNFNodes = Pick<NfNode, 'id' | 'wayru_device_id'>
 export type WupiNFNodes = Pick<NfNode, 'id' | 'mac' | 'nas_id'>
 
+export interface NfNodeWayruOsLicense {
+    id: number
+    unixpaystamp: number
+    days: number
+    created_at: Date
+    updated_at: Date
+}
 
 export type NFNodeEntryDetails = {
-    ownerDetails: {
-        lastClaimedTimestamp: number;
-        address: string;
-    };
     hostDetails: {
         address: string;
         profitPercentage: number;
