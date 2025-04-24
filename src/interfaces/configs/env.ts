@@ -10,7 +10,6 @@ export type ENV_CONFIG = {
   DATABASE_SSL: boolean,
   NODE_ENV: string,
   DB_ADMIN_PUBLIC_KEY: string,
-  REWARDS_PERIOD: 'mainnet' | 'testnet-2',
   SOLANA_ENV: 'mainnet' | 'devnet',
   NAS_API: string,
   NAS_API_KEY: string,

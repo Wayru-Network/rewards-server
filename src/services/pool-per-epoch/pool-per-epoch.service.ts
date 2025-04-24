@@ -1,26 +1,10 @@
-import { ENV } from "@config/env/env"
 import { getPoolPerEpochNumber, getPoolPerEpochByEpoch as getPoolPerEpochByEpochQuery } from "./queries"
 import moment from "moment"
 
-export const getPoolPerEpochAmounts = async (epoch: Date) => {
-    try {
-        const { ubiPoolPercentage, upiPoolPercentage, period, epochNumber } = await getPoolPerEpochPercentage(epoch)
-        const epochAmount = period === 'mainnet' ? BigInt(getPoolPerEpochAmount(epochNumber)) : getTestnetAmount(epochNumber)
-        const upiAmount = BigInt((BigInt(epochAmount) * BigInt(upiPoolPercentage)) / BigInt(100))
-        const ubiAmount = BigInt((BigInt(epochAmount) * BigInt(ubiPoolPercentage)) / BigInt(100))
-
-        const manufacturersAmount = epochAmount - upiAmount - ubiAmount
-        return { ubiAmount, upiAmount, manufacturersAmount, epochAmount }
-    } catch (error) {
-        console.error('getPoolPerEpochAmounts error', error);
-        return null;
-    }
-}
-
 export const getPoolPerEpochPercentage = async (epochDate: Date) => {
-    const period = ENV.REWARDS_PERIOD
     const epochNumber = await getPoolPerEpochNumber(epochDate)
-    const epochYear = period === 'mainnet' ? Math.ceil(epochNumber / 365) : Math.ceil(epochNumber / 7)
+    console.log('epochNumber', epochNumber)
+    const epochYear = Math.ceil(epochNumber / 365)
     let ubiPoolPercentage: number
     let upiPoolPercentage: number
     let manufacturersPoolPercentage: number
@@ -52,64 +36,32 @@ export const getPoolPerEpochPercentage = async (epochDate: Date) => {
             manufacturersPoolPercentage = 1
             break
         case 6:
-            if (period === 'testnet-2') {
-                ubiPoolPercentage = 27
-                upiPoolPercentage = 72
-                manufacturersPoolPercentage = 1
-                break
-            } else {
-                ubiPoolPercentage = 9
-                upiPoolPercentage = 90
-                manufacturersPoolPercentage = 1
-                break
-            }
-
+            ubiPoolPercentage = 9
+            upiPoolPercentage = 90
+            manufacturersPoolPercentage = 1
+            break
         case 7:
-            if (period === 'testnet-2') {
-                ubiPoolPercentage = 45
-                upiPoolPercentage = 54
-                manufacturersPoolPercentage = 1
-                break
-
-            } else {
-                ubiPoolPercentage = 9
-                upiPoolPercentage = 90
-                manufacturersPoolPercentage = 1
-                break
-            }
+            ubiPoolPercentage = 9
+            upiPoolPercentage = 90
+            manufacturersPoolPercentage = 1
+            break
         case 8:
-            if (period === 'testnet-2') {
-                ubiPoolPercentage = 63
-                upiPoolPercentage = 36
-                manufacturersPoolPercentage = 1
-                break
-
-            } else {
-                ubiPoolPercentage = 9
-                upiPoolPercentage = 90
-                manufacturersPoolPercentage = 1
-                break
-            }
+            ubiPoolPercentage = 9
+            upiPoolPercentage = 90
+            manufacturersPoolPercentage = 1
+            break
         case 9:
-            if (period === 'testnet-2') {
-
-                ubiPoolPercentage = 81
-                upiPoolPercentage = 18
-                manufacturersPoolPercentage = 1
-                break
-            } else {
-                ubiPoolPercentage = 9
-                upiPoolPercentage = 90
-                manufacturersPoolPercentage = 1
-                break
-            }
+            ubiPoolPercentage = 9
+            upiPoolPercentage = 90
+            manufacturersPoolPercentage = 1
+            break
         default:
             ubiPoolPercentage = 9
             upiPoolPercentage = 90
             manufacturersPoolPercentage = 1
             break
     }
-    return { ubiPoolPercentage, upiPoolPercentage, manufacturersPoolPercentage, epochNumber, period }
+    return { ubiPoolPercentage, upiPoolPercentage, manufacturersPoolPercentage, epochNumber }
 }
 
 export const getPoolPerEpochAmount = (epochNumber: number) => {
@@ -129,21 +81,19 @@ export const getPoolPerEpochAmount = (epochNumber: number) => {
 }
 
 export const getPoolPerEpochAmountsMainnet = async (epochDate: Date) => {
-    const { ubiPoolPercentage, upiPoolPercentage, period, epochNumber } = await getPoolPerEpochPercentage(epochDate)
+    const { ubiPoolPercentage, upiPoolPercentage, epochNumber } = await getPoolPerEpochPercentage(epochDate)
     // total amount of the emission
-    const totalEmissionAmount = period === 'mainnet' ? 
-                        BigInt(getPoolPerEpochAmount(epochNumber)) :
-                        getTestnetAmount(epochNumber)
-    
+    const totalEmissionAmount = BigInt(getPoolPerEpochAmount(epochNumber))
+
     // 1: oracles: totalEmissionAmount * 20%
     const oraclesAmount = (totalEmissionAmount * BigInt(20)) / BigInt(100)
-    
+
     // 2: manufacturers: (totalEmissionAmount * 80%) * 1%
     const totalForHotspotsAndManufacturers = (totalEmissionAmount * BigInt(80)) / BigInt(100)
-    
+
     // Manufacturers receive 1% of that 80%
     const manufacturersAmount = (totalForHotspotsAndManufacturers * BigInt(1)) / BigInt(100)
-    
+
     // 3: hotspots: (totalForHotspotsAndManufacturers * 80%) * 99%
     const hotspotsAmount = (totalForHotspotsAndManufacturers * BigInt(99)) / BigInt(100)
 
@@ -168,21 +118,8 @@ export const getPoolPerEpochByEpoch = async (epoch: Date) => {
     return epochDocument
 }
 
-export const getTestnetAmount = (epochNumber: number) => (epochNumber > 0 ? BigInt(960000000000) : BigInt(0))
-
 export const testPoolPerEpochAmountMainnet = async () => {
-    
-    // Function to format large numbers
-    const formatNumber = (num: bigint) => {
-        // Divide by 1,000,000 to get the correct representation
-        const numValue = Number(num) / 100000000;
-        return numValue.toFixed(6)
-        // return numValue.toLocaleString('en-US', {
-        //     minimumFractionDigits: 6,
-        //     maximumFractionDigits: 6
-        // });
-    };
-    
+
     // Total for verification
     let totalEmissionSum: number = 0;
     let totalHotspotsSum: number = 0;
@@ -190,75 +127,75 @@ export const testPoolPerEpochAmountMainnet = async () => {
     let totalOraclesSum: number = 0;
     const startEpoch = 1;        // From the first epoch
     const endEpoch = 36525;      // Until the last
-    
+
     console.log(`Calculating total emission from epoch ${startEpoch} to ${endEpoch}...`);
-    
-    let counter = 0;let results=[];
-    
+
+    let counter = 0; let results = [];
+
     for (let i = startEpoch; i <= endEpoch;) {
         // Calculate the epoch number
         const epochNumber = i;
-        const currentDate = moment.utc('2025-04-30T00:00:00Z').add(i-1, 'days');
+        const currentDate = moment.utc('2025-04-30T00:00:00Z').add(i - 1, 'days');
         const formattedDate = currentDate.format('YYYY-MM-DD');
-        
+
         // Get the amounts using the function
         const amounts = await getPoolPerEpochAmountsMainnet(currentDate.toDate());
-        
+
         // Convert BigInts to formatted strings for JSON (keep this part)
         const readableAmounts = {
             date: formattedDate,
             epochNumber,
             totalEmission: {
                 raw: amounts.totalEmissionAmount.toString(),
-                formatted: formatNumber(amounts.totalEmissionAmount)
+                formatted: formatPoolNumber(amounts.totalEmissionAmount).formatted
             },
             hotspots: {
                 raw: amounts.hotspotsAmount.toString(),
-                formatted: formatNumber(amounts.hotspotsAmount),
+                formatted: formatPoolNumber(amounts.hotspotsAmount).formatted,
                 percentage: "79.20%"
             },
             manufacturers: {
                 raw: amounts.manufacturersAmount.toString(),
-                formatted: formatNumber(amounts.manufacturersAmount),
+                formatted: formatPoolNumber(amounts.manufacturersAmount).formatted,
                 percentage: "0.80%"
             },
             oracles: {
                 raw: amounts.oraclesAmount.toString(),
-                formatted: formatNumber(amounts.oraclesAmount),
+                formatted: formatPoolNumber(amounts.oraclesAmount).formatted,
                 percentage: "20.00%"
             },
             upi: {
                 raw: amounts.upiAmount.toString(),
-                formatted: formatNumber(amounts.upiAmount)
+                formatted: formatPoolNumber(amounts.upiAmount).formatted
             },
             ubi: {
                 raw: amounts.ubiAmount.toString(),
-                formatted: formatNumber(amounts.ubiAmount)
+                formatted: formatPoolNumber(amounts.ubiAmount).formatted
             },
             totalPercentage: "100.00%"
         };
-        
+
         // For this specific test, we do not save in the array to avoid memory
         results.push(readableAmounts);
-        
+
         // Add directly the numeric value without formatting to avoid NaN
         const emissionToAdd = Number(readableAmounts.totalEmission.formatted)
         const hotspotsToAdd = Number(readableAmounts.hotspots.formatted)
         const manufacturersToAdd = Number(readableAmounts.manufacturers.formatted)
         const oraclesToAdd = Number(readableAmounts.oracles.formatted)
-        
-        
+
+
         totalEmissionSum += emissionToAdd;
         totalHotspotsSum += hotspotsToAdd;
         totalManufacturersSum += manufacturersToAdd;
         totalOraclesSum += oraclesToAdd;
-        
+
         // Show progress every 1000 epochs
         counter++;
         if (counter % 1000 === 0 || epochNumber === endEpoch) {
             console.log(`Processed ${counter} epochs. Current total: ${totalEmissionSum}`);
         }
-        
+
         i++;
     }
 
@@ -266,7 +203,7 @@ export const testPoolPerEpochAmountMainnet = async () => {
     const hotspotsExpectedTotal = Number('3,564,000,000.00000000'.replace(/,/g, '')); // 79.20% of the emission
     const manufacturersExpectedTotal = Number('36,000,000.00000000'.replace(/,/g, '')); // 0.80% of the emission
     const oraclesExpectedTotal = Number('900,000,000.00000000'.replace(/,/g, '')); // 20.00% of the emission
-    
+
     console.log('***************** ----- Emissions results ------- *****************');
     const emissionSumNumber = totalEmissionSum;
     console.log(`Total emission sum: ${emissionSumNumber.toFixed(8)}`);
@@ -298,8 +235,18 @@ export const testPoolPerEpochAmountMainnet = async () => {
     const outputPath = 'pool_amounts_test.json';
     fs.writeFileSync(outputPath, JSON.stringify(results, null, 2));
     //console.log(`Results saved to ${outputPath}`);
-    
-    
+
+
     console.log(`Test completed.`);
     return totalEmissionSum;
 }
+
+export const formatPoolNumber = (num: bigint) => {
+    // Divide by 1,000,000 to get the correct representation
+    const numValue = Number(num) / 100000000;
+    const formattedNumber = numValue.toFixed(6)
+    return {
+        numValue: numValue,
+        formatted: formattedNumber
+    }
+};

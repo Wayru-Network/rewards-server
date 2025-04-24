@@ -2,7 +2,7 @@ import { ENV } from "@config/env/env";
 import pool from "../../config/db";
 import { PoolPerEpoch, PoolPerEpochEntry, UpdatePoolNetworkScoreResponse } from "../../interfaces/pool-per-epoch";
 import { RewardPerEpochEntry } from "@interfaces/rewards-per-epoch";
-import { getPoolPerEpochAmounts } from "./pool-per-epoch.service";
+import { formatPoolNumber, getPoolPerEpochAmountsMainnet } from "./pool-per-epoch.service";
 import moment from "moment";
 import { poolPerEpochTable, queryCountRewardsPerEpochByPoolId, selectRewardsByPoolPerEpochIdQuery } from "./helpers";
 
@@ -27,7 +27,7 @@ export const createCurrentPoolPerEpoch = async (epochParams?: Partial<PoolPerEpo
         const lastEpochDateNumber = new Date().setDate(new Date().getDate() - 1)
         const lastEpochDate = new Date(lastEpochDateNumber)
         const formattedEpoch = moment(lastEpochDate).utc().format('YYYY-MM-DD')
-        const epochAmounts = await getPoolPerEpochAmounts(lastEpochDate)
+        const epochAmounts = await getPoolPerEpochAmountsMainnet(lastEpochDate)
         const wayruPoolUbi = Number(epochAmounts?.ubiAmount) / 1000000
         const wayruPoolUpi = Number(epochAmounts?.upiAmount) / 1000000
         const wubi_processing_status = wayruPoolUbi > 0 ? 'sending_messages' : 'messages_not_sent'
@@ -54,6 +54,7 @@ export const createCurrentPoolPerEpoch = async (epochParams?: Partial<PoolPerEpo
             wupi_messages_received: epochParams?.wupi_messages_received ?? 0,
             wubi_messages_sent: epochParams?.wubi_messages_sent ?? 0,
             wupi_messages_sent: epochParams?.wupi_messages_sent ?? 0,
+            total_hotspot_pool: epochParams?.total_hotspot_pool ?? formatPoolNumber(epochAmounts?.hotspotsAmount).numValue,
         }
 
 
@@ -93,8 +94,11 @@ export const createCurrentPoolPerEpoch = async (epochParams?: Partial<PoolPerEpo
                 wupi_messages_received,
                 wupi_messages_sent,
                 wupi_processing_status,
-                wupi_error_message
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18) 
+                wupi_error_message,
+
+                -- Total hotspot pool
+                total_hotspot_pool
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19) 
             RETURNING *`,
             [
                 // Basic dates and pools
@@ -121,7 +125,8 @@ export const createCurrentPoolPerEpoch = async (epochParams?: Partial<PoolPerEpo
                 epochData.wupi_messages_received,
                 epochData.wupi_messages_sent,
                 epochData.wupi_processing_status,
-                epochData.wupi_error_message
+                epochData.wupi_error_message,
+                epochData.total_hotspot_pool
             ]
         );
 
@@ -135,9 +140,9 @@ export const createCurrentPoolPerEpoch = async (epochParams?: Partial<PoolPerEpo
 
 export const getPoolPerEpochNumber = async (targetDate: Date) => {
     try {
-        const period = ENV.REWARDS_PERIOD
-        const startDate = 'mainnet' === period ? '2025-04-30T00:00:00Z' : (ENV.SOLANA_ENV === 'devnet' ? '2025-02-25T00:00:00Z' : '2025-02-25T00:00:00Z')
+        const startDate =  '2025-04-30T00:00:00Z' // first day of the mainnet
         const start = new Date(startDate).valueOf()
+        console.log('targetDate', targetDate)
         const target = new Date(targetDate).valueOf()
         const startCoolDownDate = new Date('2025-04-20T00:00:00Z').valueOf()
         const startMainnetDate = new Date('2025-04-30T00:00:00Z').valueOf()
@@ -147,7 +152,6 @@ export const getPoolPerEpochNumber = async (targetDate: Date) => {
         }
         const diffInDays = diffInMs / (1000 * 60 * 60 * 24)
         const epochNumber = Math.floor(diffInDays) + 1
-        //give us a few days to change REWARDS_PERIOD var to mainnet
         if (target > startCoolDownDate && target < startMainnetDate) {
             return 0
         }
