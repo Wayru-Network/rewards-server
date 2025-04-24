@@ -11,7 +11,6 @@ export const ENV: ENV_CONFIG = {
   DATABASE_SSL: process.env.DATABASE_SSL === 'true',
   NODE_ENV: process.env.NODE_ENV || 'develop',
   DB_ADMIN_PUBLIC_KEY: process.env.DB_ADMIN_PUBLIC_KEY || '',
-  REWARDS_PERIOD: process.env.REWARDS_PERIOD === 'mainnet' ? 'mainnet' : 'testnet-2',
   SOLANA_ENV: (process.env.SOLANA_ENV as 'mainnet' | 'devnet') || 'devnet',
   NAS_API: process.env.NAS_API || 'https://nas.api.tech',
   NAS_API_KEY: process.env.NAS_API_KEY || '121212',

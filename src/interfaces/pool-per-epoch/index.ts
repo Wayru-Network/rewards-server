@@ -26,6 +26,7 @@ export interface PoolPerEpoch {
     wubi_retry_count?: number,
     wupi_retry_count?: number,
     is_retrying?: boolean,
+    total_hotspot_pool?: number
 }
 
 
