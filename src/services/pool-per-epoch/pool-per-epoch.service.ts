@@ -128,9 +128,8 @@ export const getPoolPerEpochAmount = (epochNumber: number) => {
     return BigInt((1200000000000 * Math.pow(Number(reductionPercentage), epochNumber - 1)).toFixed(0))
 }
 
-export const getPoolPerEpochAmountsMainnet = async (epochNumber: number, epochDate: Date) => {
-    const { ubiPoolPercentage, upiPoolPercentage, period } = await getPoolPerEpochPercentage(epochDate)
-    
+export const getPoolPerEpochAmountsMainnet = async (epochDate: Date) => {
+    const { ubiPoolPercentage, upiPoolPercentage, period, epochNumber } = await getPoolPerEpochPercentage(epochDate)
     // total amount of the emission
     const totalEmissionAmount = period === 'mainnet' ? 
                         BigInt(getPoolPerEpochAmount(epochNumber)) :
@@ -184,10 +183,10 @@ export const testPoolPerEpochAmountMainnet = async () => {
     };
     
     // Total for verification
-    let totalEmissionSum = 0;
-    let totalHotspotsSum = 0;
-    let totalManufacturersSum = 0;
-    let totalOraclesSum = 0;
+    let totalEmissionSum: bigint = BigInt(0);
+    let totalHotspotsSum: bigint = BigInt(0);
+    let totalManufacturersSum: bigint = BigInt(0);
+    let totalOraclesSum: bigint = BigInt(0);
     const startEpoch = 1;        // From the first epoch
     const endEpoch = 36525;      // Until the last
     
@@ -198,11 +197,11 @@ export const testPoolPerEpochAmountMainnet = async () => {
     for (let i = startEpoch; i <= endEpoch;) {
         // Calculate the epoch number
         const epochNumber = i;
-        const currentDate = moment.utc('2023-04-30T00:00:00Z').add(i-1, 'days');
+        const currentDate = moment.utc('2025-04-30T00:00:00Z').add(i-1, 'days');
         const formattedDate = currentDate.format('YYYY-MM-DD');
         
         // Get the amounts using the function
-        const amounts = await getPoolPerEpochAmountsMainnet(epochNumber, currentDate.toDate());
+        const amounts = await getPoolPerEpochAmountsMainnet(currentDate.toDate());
         
         // Convert BigInts to formatted strings for JSON (keep this part)
         const readableAmounts = {
@@ -242,17 +241,11 @@ export const testPoolPerEpochAmountMainnet = async () => {
         //results.push(readableAmounts);
         
         // Add directly the numeric value without formatting to avoid NaN
-        const emissionToAdd = Number(amounts.totalEmissionAmount) / 1000000;
-        const hotspotsToAdd = Number(amounts.hotspotsAmount) / 1000000;
-        const manufacturersToAdd = Number(amounts.manufacturersAmount) / 1000000;
-        const oraclesToAdd = Number(amounts.oraclesAmount) / 1000000;
+        const emissionToAdd = amounts.totalEmissionAmount
+        const hotspotsToAdd = amounts.hotspotsAmount
+        const manufacturersToAdd = amounts.manufacturersAmount
+        const oraclesToAdd = amounts.oraclesAmount
         
-        // Verify if the value is valid
-        if (isNaN(emissionToAdd) || isNaN(hotspotsToAdd) || isNaN(manufacturersToAdd) || isNaN(oraclesToAdd)) {
-            console.error(`Found NaN at epoch ${epochNumber}`);
-            console.error(`Emission: ${emissionToAdd}, Hotspots: ${hotspotsToAdd}, Manufacturers: ${manufacturersToAdd}, Oracles: ${oraclesToAdd}`);
-            break;
-        }
         
         totalEmissionSum += emissionToAdd;
         totalHotspotsSum += hotspotsToAdd;
@@ -262,7 +255,7 @@ export const testPoolPerEpochAmountMainnet = async () => {
         // Show progress every 1000 epochs
         counter++;
         if (counter % 1000 === 0 || epochNumber === endEpoch) {
-            console.log(`Processed ${counter} epochs. Current total: ${totalEmissionSum.toFixed(6)}`);
+            console.log(`Processed ${counter} epochs. Current total: ${Number(totalEmissionSum) / 1000000}`);
         }
         
         i++;
@@ -274,24 +267,28 @@ export const testPoolPerEpochAmountMainnet = async () => {
     const oraclesExpectedTotal = Number('900,000,000.000000'.replace(/,/g, '')); // 20.00% of the emission
     
     console.log('***************** ----- Emissions results ------- *****************');
-    console.log(`Total emission sum: ${totalEmissionSum.toFixed(6)}`);
+    const emissionSumNumber = Number(totalEmissionSum) / 1000000;
+    console.log(`Total emission sum: ${emissionSumNumber.toFixed(6)}`);
     console.log(`Expected total: ${emissionExpectedTotal.toFixed(6)}`);
-    const emissionDifference = emissionExpectedTotal - totalEmissionSum;
+    const emissionDifference = emissionExpectedTotal - emissionSumNumber;
     console.log(`Difference: ${(emissionDifference).toFixed(6)}`);
     console.log('***************** ----- hotspots results ------- *****************');
-    console.log(`Total hotspots sum: ${totalHotspotsSum.toFixed(6)}`);
+    const hotspotsSumNumber = Number(totalHotspotsSum) / 1000000;
+    console.log(`Total hotspots sum: ${hotspotsSumNumber.toFixed(6)}`);
     console.log(`Expected total: ${hotspotsExpectedTotal.toFixed(6)}`);
-    const hotspotsDifference = hotspotsExpectedTotal - totalHotspotsSum;
+    const hotspotsDifference = hotspotsExpectedTotal - hotspotsSumNumber;
     console.log(`Difference: ${(hotspotsDifference).toFixed(6)}`);
     console.log('***************** ----- manufacturers results ------- *****************');
-    console.log(`Total manufacturers sum: ${totalManufacturersSum.toFixed(6)}`);
+    const manufacturersSumNumber = Number(totalManufacturersSum) / 1000000;
+    console.log(`Total manufacturers sum: ${manufacturersSumNumber.toFixed(6)}`);
     console.log(`Expected total: ${manufacturersExpectedTotal.toFixed(6)}`);
-    const manufacturersDifference = manufacturersExpectedTotal - totalManufacturersSum;
+    const manufacturersDifference = manufacturersExpectedTotal - manufacturersSumNumber;
     console.log(`Difference: ${(manufacturersDifference).toFixed(6)}`);
     console.log('***************** ----- oracles results ------- *****************');
-    console.log(`Total oracles sum: ${totalOraclesSum.toFixed(6)}`);
+    const oraclesSumNumber = Number(totalOraclesSum) / 1000000;
+    console.log(`Total oracles sum: ${oraclesSumNumber.toFixed(6)}`);
     console.log(`Expected total: ${oraclesExpectedTotal.toFixed(6)}`);
-    const oraclesDifference = oraclesExpectedTotal - totalOraclesSum;
+    const oraclesDifference = oraclesExpectedTotal - oraclesSumNumber;
     console.log(`Difference: ${(oraclesDifference).toFixed(6)}`);
 
     // do not save the results in a JSON file because it's too big
