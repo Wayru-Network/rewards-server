@@ -144,7 +144,7 @@ export const createCurrentPoolPerEpoch = async (epochParams?: Partial<PoolPerEpo
 
 export const getPoolPerEpochNumber = async (targetDate: Date) => {
     try {
-        const startMainnetDate = new Date('2025-04-27T00:00:00Z').valueOf()
+        const startMainnetDate = new Date('2025-04-29T00:00:00Z').valueOf()
         const start = new Date(startMainnetDate).valueOf()
         const target = new Date(targetDate).valueOf()
         const startCoolDownDate = new Date('2025-04-20T00:00:00Z').valueOf()
