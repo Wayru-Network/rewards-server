@@ -1,6 +1,6 @@
 import { NfNode, NFNodeEntryDetails } from "@interfaces/nfnodes"
 import { getNFNodeById, getNfNodeByWayruDeviceId, getWayruOsLicenseByNFNodeId } from "./queries"
-import { getNFNodeEntry } from "@services/solana/reward-system/reward-system.service"
+import { fetchNFNodeEntryWithRetry } from "@services/solana/reward-system/reward-system.service"
 import { RewardSystem } from "@interfaces/reward-system/reward-system"
 import { Program } from "@coral-xyz/anchor"
 import { ENV } from "@config/env/env"
@@ -84,7 +84,7 @@ const checkNFNodeEligibility = async (
             return { isEligible: true };
         }
 
-        const nfnodeEntry = await getNFNodeEntry(nfnode.solana_asset_id, rewardSystemProgram);
+        const nfnodeEntry = await fetchNFNodeEntryWithRetry(nfnode.solana_asset_id, rewardSystemProgram);
         if (!nfnodeEntry) {
             return {
                 isEligible: false,

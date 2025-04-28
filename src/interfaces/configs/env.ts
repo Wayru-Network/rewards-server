@@ -1,5 +1,3 @@
-
-
 export type ENV_CONFIG = {
   PORT: number | string,
   DATABASE_HOST: string,
@@ -27,5 +25,6 @@ export type ENV_CONFIG = {
   SOLANA_PRIVATE_KEY: string,
   REWARDS_MODE: 'production' | 'test',
   ENABLE_ERROR_SIMULATION: boolean,
+  RABBIT_RATE_LIMIT_PER_SECOND?: number, // Maximum number of messages to process per second
 };
 

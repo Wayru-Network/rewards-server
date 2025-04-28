@@ -13,29 +13,47 @@ export const getRewardSystemProgramId = async () => {
     return rewardSystemProgramId.replace(/\s/g, '')
 }
 
-export const getNFNodeEntry = async (solanaAssetId: string, program: Program<RewardSystem>): Promise<NFNodeEntryDetails | undefined> => {
-    try {
-        const nftMintAddress = new PublicKey(solanaAssetId)
-        const [nfnodeEntryPDA] = PublicKey.findProgramAddressSync(
-            [Buffer.from("nfnode_entry"), nftMintAddress.toBuffer()],
-            program.programId
-        );
+export const fetchNFNodeEntryWithRetry = async (
+    solanaAssetId: string,
+    program: Program<RewardSystem>,
+    maxRetries = 5,
+    initialDelay = 500
+): Promise<NFNodeEntryDetails | undefined> => {
+    let attempt = 0;
+    let delay = initialDelay;
 
-        // Get NFNode entry
-        const nfNodeEntry = await program.account.nfNodeEntry.fetch(nfnodeEntryPDA);
-        if (!nfNodeEntry) {
-            return undefined
+    while (attempt < maxRetries) {
+        try {
+            const nftMintAddress = new PublicKey(solanaAssetId)
+            const [nfnodeEntryPDA] = PublicKey.findProgramAddressSync(
+                [Buffer.from("nfnode_entry"), nftMintAddress.toBuffer()],
+                program.programId
+            );
+            const nfNodeEntry = await program.account.nfNodeEntry.fetch(nfnodeEntryPDA);
+            if (!nfNodeEntry) return undefined;
+            const formattedNFNodeEntry = formatNFNodeEntry(nfNodeEntry)
+            console.log('entry found for ', solanaAssetId, formattedNFNodeEntry)
+            return formattedNFNodeEntry;
+        } catch (error: any) {
+            // If rate limit error, retry
+            if (typeof error.message === 'string' && error.message.includes('429')) {
+                console.warn(`Rate limit hit. Retrying after ${delay}ms...`);
+                await new Promise(res => setTimeout(res, delay));
+                attempt++;
+                delay *= 2; // Exponential backoff
+                continue;
+            }
+            // If account not found error, don't retry
+            if (typeof error.message === 'string' && error.message.includes('Account does not exist or has no data')) {
+                console.warn(`Entry not found for ${solanaAssetId}:`);
+                return undefined;
+            }
+            // Other errors, throw
+            throw error;
         }
-    
-        // Modify formatNFNodeEntry to include the owner
-        const formattedEntry = {
-            ...formatNFNodeEntry(nfNodeEntry)
-        };
-        return formattedEntry;
-    } catch (error) {
-        console.error('❌ Error getting NFNode entry:', error);
-        return undefined
     }
+    // If all attempts failed, throw error
+    return undefined;
 }
 
 

@@ -28,4 +28,5 @@ export const ENV: ENV_CONFIG = {
   SOLANA_PRIVATE_KEY: process.env.SOLANA_PRIVATE_KEY || '',
   REWARDS_MODE: process.env.REWARDS_MODE as 'production' | 'test' || 'test',
   ENABLE_ERROR_SIMULATION: process.env.ENABLE_ERROR_SIMULATION === 'true' || false,
+  RABBIT_RATE_LIMIT_PER_SECOND: process.env.RABBIT_RATE_LIMIT_PER_SECOND ? parseInt(process.env.RABBIT_RATE_LIMIT_PER_SECOND, 10) : 40, // Default to 40 messages per second
 };

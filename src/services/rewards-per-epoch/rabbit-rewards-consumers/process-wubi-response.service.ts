@@ -20,7 +20,6 @@ export const processWubiRabbitResponse = async (msg: ConsumeMessage) => {
             console.log(' wayru_device_id', wayru_device_id);
             console.log(' epoch_id', epoch_id);
             console.log(' last_item', last_item);
-            throw new Error('invalid Wubi message'); // throw error to be handled by the wrapper
         }
 
         // Get instance of RewardSystem
@@ -42,6 +41,9 @@ export const processWubiRabbitResponse = async (msg: ConsumeMessage) => {
         // Create rewards if eligible and hotspot score is greater than 0
         // because we don't need to create rewards with a 0 hotspot score
         const hotspot_score_multiplied = (hotspot_score ?? 0) * multiplier
+        if (isEligible) {
+            console.log('Wubi isEligible', isEligible, 'hotspot_score_multiplied', hotspot_score_multiplied)
+        }
         if (isEligible && hotspot_score_multiplied > 0) {
             // Create rewards
             const reward = await createRewardsPerEpoch({
