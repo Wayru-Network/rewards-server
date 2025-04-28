@@ -31,7 +31,9 @@ export const fetchNFNodeEntryWithRetry = async (
             );
             const nfNodeEntry = await program.account.nfNodeEntry.fetch(nfnodeEntryPDA);
             if (!nfNodeEntry) return undefined;
-            return { ...formatNFNodeEntry(nfNodeEntry) };
+            const formattedNFNodeEntry = formatNFNodeEntry(nfNodeEntry)
+            console.log('entry found for ', solanaAssetId, formattedNFNodeEntry)
+            return formattedNFNodeEntry;
         } catch (error: any) {
             // If rate limit error, retry
             if (typeof error.message === 'string' && error.message.includes('429')) {

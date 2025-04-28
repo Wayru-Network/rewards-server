@@ -39,7 +39,9 @@ export const processWupiRabbitResponse = async (msg: ConsumeMessage) => {
         // Calculate score
         const scoreInGb = Number(BigInt(score)) / 1000000000;
         const hotspot_score = Number((scoreInGb > 0 ? scoreInGb * multiplier : 0).toFixed(6))
-
+        if (isEligible) {
+            console.log('Wupi isEligible', isEligible, 'hotspot_score', hotspot_score)
+        }
         // Create rewards if eligible and hotspot score is greater than 0
         // because we don't need to create rewards with a 0 hotspot score
         if (isEligible && hotspot_score > 0) {

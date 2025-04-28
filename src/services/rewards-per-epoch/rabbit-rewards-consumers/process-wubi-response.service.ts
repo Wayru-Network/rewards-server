@@ -41,6 +41,9 @@ export const processWubiRabbitResponse = async (msg: ConsumeMessage) => {
         // Create rewards if eligible and hotspot score is greater than 0
         // because we don't need to create rewards with a 0 hotspot score
         const hotspot_score_multiplied = (hotspot_score ?? 0) * multiplier
+        if (isEligible) {
+            console.log('Wubi isEligible', isEligible, 'hotspot_score_multiplied', hotspot_score_multiplied)
+        }
         if (isEligible && hotspot_score_multiplied > 0) {
             // Create rewards
             const reward = await createRewardsPerEpoch({

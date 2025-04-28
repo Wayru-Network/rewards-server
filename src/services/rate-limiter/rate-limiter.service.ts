@@ -77,7 +77,6 @@ class RateLimiter {
       const task = this.processingQueue.shift();
       if (task) {
         this.tokens--;
-        console.log(`[RateLimiter] processing message at ${new Date().toISOString()}`);
         try {
           await task();
         } catch (error) {
