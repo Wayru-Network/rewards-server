@@ -5,7 +5,7 @@ import { eventHub } from "@services/events/event-hub";
 import { updatePoolNetworkScore, updatePoolPerEpochById } from "../queries";
 import { processRewardsBatch } from "@services/rewards-per-epoch/queries";
 import { BATCH_SIZE_REWARDS } from "@constants";
-import { getPoolPerEpochAmountsMainnet } from "../pool-per-epoch.service";
+import { formatPoolNumber, getPoolPerEpochAmountsMainnet } from "../pool-per-epoch.service";
 import { sumAllNetworkScoresQuery } from "@services/rewards-per-epoch/helpers";
 
 export class NetworkScoreCalculator {
@@ -95,7 +95,7 @@ export class NetworkScoreCalculator {
             if (!totalRewards) {
                 throw new Error('Total rewards not found');
             }
-            const totalRewardsAmount = type === 'wUBI' ? Number(totalRewards.ubiAmount) : Number(totalRewards.upiAmount)
+            const totalRewardsAmount = type === 'wUBI' ? formatPoolNumber(totalRewards.ubiAmount).numValue : formatPoolNumber(totalRewards.upiAmount).numValue
 
             // Before the loop, add log of total
             console.log(`Total rewards to process: ${rewards.length}`);
