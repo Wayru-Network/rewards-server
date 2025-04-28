@@ -46,7 +46,10 @@ export class RewardSystemManager {
             const programId = new anchor.web3.PublicKey(rewardSystemProgramId);
             const idl = await anchor.Program.fetchIdl(programId, provider);
             
-            if (!idl) throw new Error("IDL not found");
+            if (!idl) {
+                console.error('❌ Failed to initialize Reward System Program: IDL not found');
+                return null;
+            }
             
             RewardSystemManager.instance = await anchor.Program.at(
                 programId,
@@ -56,8 +59,8 @@ export class RewardSystemManager {
             console.log('✅ Reward System Program initialized');
             return RewardSystemManager.instance;
         } catch (error) {
-            console.error('❌ Failed to initialize Reward System Program:', error);
-            throw error;
+            console.error('Error loading IDL:', error);
+            return null;
         } finally {
             RewardSystemManager.isInitializing = false;
         }

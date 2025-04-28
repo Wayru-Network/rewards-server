@@ -7,3 +7,4 @@ coverage/
 *.tmp.*
 *.log.*
 *secrets.yaml
+pool_amounts_test.json

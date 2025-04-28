@@ -2,9 +2,7 @@ import { Program } from "@coral-xyz/anchor";
 import { NFNodeEntry, NFNodeEntryDetails } from "@interfaces/nfnodes";
 import { RewardSystem } from "@interfaces/reward-system/reward-system";
 import { getKey } from "@services/keys/queries";
-import { RawAccount, AccountLayout } from "@solana/spl-token";
 import { PublicKey } from "@solana/web3.js";
-import { RewardSystemManager } from "./reward-system.manager";
 
 export const getRewardSystemProgramId = async () => {
     const key = await getKey('REWARD_SYSTEM_PROGRAM_ID')
@@ -15,44 +13,47 @@ export const getRewardSystemProgramId = async () => {
     return rewardSystemProgramId.replace(/\s/g, '')
 }
 
-export const getNFNodeEntry = async (solanaAssetId: string, program: Program<RewardSystem>): Promise<NFNodeEntryDetails | undefined> => {
-    try {
-        const nftMintAddress = new PublicKey(solanaAssetId)
-        const [nfnodeEntryPDA] = PublicKey.findProgramAddressSync(
-            [Buffer.from("nfnode_entry"), nftMintAddress.toBuffer()],
-            program.programId
-        );
+export const fetchNFNodeEntryWithRetry = async (
+    solanaAssetId: string,
+    program: Program<RewardSystem>,
+    maxRetries = 5,
+    initialDelay = 500
+): Promise<NFNodeEntryDetails | undefined> => {
+    let attempt = 0;
+    let delay = initialDelay;
 
-        // Get NFNode entry
-        const nfNodeEntry = await program.account.nfNodeEntry.fetch(nfnodeEntryPDA);
-        if (!nfNodeEntry) {
-            return undefined
-        }
-
-        // Get token account of the NFT
-        const largestAccounts = await program.provider.connection.getTokenLargestAccounts(nftMintAddress);
-        const largestAccountInfo = await program.provider.connection.getAccountInfo(largestAccounts.value[0].address);
-
-        // Deserialize token account to get the owner
-        let tokenAccountData: RawAccount | undefined = undefined
-        if (largestAccountInfo) {
-            tokenAccountData = AccountLayout.decode(largestAccountInfo?.data);
-        }
-        const ownerAddress = new PublicKey(tokenAccountData?.owner as unknown as string);
-
-        // Modify formatNFNodeEntry to include the owner
-        const formattedEntry = {
-            ...formatNFNodeEntry(nfNodeEntry),
-            ownerDetails: {
-                ...formatNFNodeEntry(nfNodeEntry as NFNodeEntry).ownerDetails,
-                address: ownerAddress.toString()
+    while (attempt < maxRetries) {
+        try {
+            const nftMintAddress = new PublicKey(solanaAssetId)
+            const [nfnodeEntryPDA] = PublicKey.findProgramAddressSync(
+                [Buffer.from("nfnode_entry"), nftMintAddress.toBuffer()],
+                program.programId
+            );
+            const nfNodeEntry = await program.account.nfNodeEntry.fetch(nfnodeEntryPDA);
+            if (!nfNodeEntry) return undefined;
+            const formattedNFNodeEntry = formatNFNodeEntry(nfNodeEntry)
+            console.log('entry found for ', solanaAssetId, formattedNFNodeEntry)
+            return formattedNFNodeEntry;
+        } catch (error: any) {
+            // If rate limit error, retry
+            if (typeof error.message === 'string' && error.message.includes('429')) {
+                console.warn(`Rate limit hit. Retrying after ${delay}ms...`);
+                await new Promise(res => setTimeout(res, delay));
+                attempt++;
+                delay *= 2; // Exponential backoff
+                continue;
             }
-        };
-        return formattedEntry;
-    } catch (error) {
-        console.log("Error getting NFNode entry:", (error as Error).message);
-        return undefined
+            // If account not found error, don't retry
+            if (typeof error.message === 'string' && error.message.includes('Account does not exist or has no data')) {
+                console.warn(`Entry not found for ${solanaAssetId}:`);
+                return undefined;
+            }
+            // Other errors, throw
+            throw error;
+        }
     }
+    // If all attempts failed, throw error
+    return undefined;
 }
 
 
@@ -61,10 +62,6 @@ function formatNFNodeEntry(entry: NFNodeEntry): NFNodeEntryDetails {
     const formatWayruTokens = (amount: number) => amount / 1_000_000; // 6 decimals
 
     return {
-        ownerDetails: {
-            lastClaimedTimestamp: entry.ownerLastClaimedTimestamp.toNumber(),
-            address: "" // it will be filled later
-        },
         hostDetails: {
             address: entry.host.toString(),
             profitPercentage: entry.hostShare.toNumber(),

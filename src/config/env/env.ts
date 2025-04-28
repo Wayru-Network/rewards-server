@@ -11,7 +11,6 @@ export const ENV: ENV_CONFIG = {
   DATABASE_SSL: process.env.DATABASE_SSL === 'true',
   NODE_ENV: process.env.NODE_ENV || 'develop',
   DB_ADMIN_PUBLIC_KEY: process.env.DB_ADMIN_PUBLIC_KEY || '',
-  REWARDS_PERIOD: process.env.REWARDS_PERIOD === 'mainnet' ? 'mainnet' : 'testnet-2',
   SOLANA_ENV: (process.env.SOLANA_ENV as 'mainnet' | 'devnet') || 'devnet',
   NAS_API: process.env.NAS_API || 'https://nas.api.tech',
   NAS_API_KEY: process.env.NAS_API_KEY || '121212',
@@ -29,4 +28,5 @@ export const ENV: ENV_CONFIG = {
   SOLANA_PRIVATE_KEY: process.env.SOLANA_PRIVATE_KEY || '',
   REWARDS_MODE: process.env.REWARDS_MODE as 'production' | 'test' || 'test',
   ENABLE_ERROR_SIMULATION: process.env.ENABLE_ERROR_SIMULATION === 'true' || false,
+  RABBIT_RATE_LIMIT_PER_SECOND: process.env.RABBIT_RATE_LIMIT_PER_SECOND ? parseInt(process.env.RABBIT_RATE_LIMIT_PER_SECOND, 10) : 40, // Default to 40 messages per second
 };

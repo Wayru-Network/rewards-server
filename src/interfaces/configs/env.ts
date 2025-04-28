@@ -1,5 +1,3 @@
-
-
 export type ENV_CONFIG = {
   PORT: number | string,
   DATABASE_HOST: string,
@@ -10,7 +8,6 @@ export type ENV_CONFIG = {
   DATABASE_SSL: boolean,
   NODE_ENV: string,
   DB_ADMIN_PUBLIC_KEY: string,
-  REWARDS_PERIOD: 'mainnet' | 'testnet-2',
   SOLANA_ENV: 'mainnet' | 'devnet',
   NAS_API: string,
   NAS_API_KEY: string,
@@ -28,5 +25,6 @@ export type ENV_CONFIG = {
   SOLANA_PRIVATE_KEY: string,
   REWARDS_MODE: 'production' | 'test',
   ENABLE_ERROR_SIMULATION: boolean,
+  RABBIT_RATE_LIMIT_PER_SECOND?: number, // Maximum number of messages to process per second
 };
 

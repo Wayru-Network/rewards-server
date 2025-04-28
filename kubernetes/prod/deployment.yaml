@@ -47,6 +47,8 @@ spec:
               value: REWARDS_SERVER_WUPI_PROD
             - name: NAS_API
               value: https://nas.api.wayru.tech
+            - name: RABBIT_RATE_LIMIT_PER_SECOND
+              value: "15"
             - name: NAS_API_KEY
               valueFrom:
                 secretKeyRef:
