@@ -16,8 +16,8 @@ class RateLimiter {
   private readonly minInterval: number;
 
   private constructor() {
-    // Get rate limit from environment or use default (50 requests per second)
-    this.maxTokens = ENV.RABBIT_RATE_LIMIT_PER_SECOND || 50;
+    // Get rate limit from environment or use default (15 requests per second)
+    this.maxTokens = ENV.RABBIT_RATE_LIMIT_PER_SECOND || 15;
     this.tokens = this.maxTokens;
     this.lastRefill = Date.now();
     this.refillRate = 1000; // 1 second in milliseconds
