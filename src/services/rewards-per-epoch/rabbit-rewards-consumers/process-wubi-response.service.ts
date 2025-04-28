@@ -20,7 +20,6 @@ export const processWubiRabbitResponse = async (msg: ConsumeMessage) => {
             console.log(' wayru_device_id', wayru_device_id);
             console.log(' epoch_id', epoch_id);
             console.log(' last_item', last_item);
-            throw new Error('invalid Wubi message'); // throw error to be handled by the wrapper
         }
 
         // Get instance of RewardSystem

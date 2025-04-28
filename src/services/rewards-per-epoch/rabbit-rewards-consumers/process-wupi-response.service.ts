@@ -14,7 +14,11 @@ export const processWupiRabbitResponse = async (msg: ConsumeMessage) => {
 
         if (!nas_id || !nfnode_id || !epoch || typeof total_valid_nas !== 'number') {
             console.error('invalid WUPI message');
-            throw new Error('invalid WUPI message'); // throw error to be handled by the wrapper
+            console.log(' nas_id', nas_id);
+            console.log(' nfnode_id', nfnode_id);
+            console.log(' epoch', epoch);
+            console.log(' total_valid_nas', total_valid_nas);
+            console.log(' score', score);
         }
 
         // Get instance of reward system program

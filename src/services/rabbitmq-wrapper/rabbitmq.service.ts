@@ -1,13 +1,14 @@
-import { ConsumeMessage, Channel } from 'amqplib';
+import { Channel } from 'amqplib';
 import * as amqp from 'amqp-connection-manager';
 import { ChannelWrapper, AmqpConnectionManager } from 'amqp-connection-manager';
 import { v4 as uuidv4 } from 'uuid';
 import { MessageProcessor, RabbitConfig } from '@interfaces/rabbitmq-wrapper';
-import { QueueConfig } from '@interfaces/rabbitmq-wrapper';
 import { ENV } from '@config/env/env';
 import { WUPIMessage, WUBIMessage } from '@interfaces/rewards-per-epoch';
 import { processWubiRabbitResponse } from '@services/rewards-per-epoch/rabbit-rewards-consumers/process-wubi-response.service';
 import { processWupiRabbitResponse } from '@services/rewards-per-epoch/rabbit-rewards-consumers/process-wupi-response.service';
+import { rateLimiter } from '@services/rate-limiter/rate-limiter.service';
+
 interface QueueChannel {
     name: string;
     replyTo: string;
@@ -115,7 +116,7 @@ class RabbitWrapper {
         try {
             const queueChannel = this.channels.get(queueName);
             if (!queueChannel) throw new Error(`Channel ${queueName} not found`);
-            
+
             await this.channel.sendToQueue(
                 queueName,
                 Buffer.from(JSON.stringify(message)),
@@ -152,8 +153,16 @@ class RabbitWrapper {
                     async (msg) => {
                         if (msg) {
                             try {
-                                await processor(msg);
-                                channel.ack(msg);
+                                // Use rate limiter to process the message
+                                await rateLimiter.execute(async () => {
+                                    try {
+                                        await processor(msg);
+                                        channel.ack(msg);
+                                    } catch (error) {
+                                        console.error(`Error processing message in ${queueName}:`, error);
+                                        channel.nack(msg, false, true);
+                                    }
+                                });
                             } catch (error) {
                                 console.error(`Error processing message in ${queueName}:`, error);
                                 channel.nack(msg, false, true);
@@ -174,22 +183,22 @@ class RabbitWrapper {
     /**
      * Close the connection with RabbitMQ in a clean way
         */
-        public async close(): Promise<void> {
+    public async close(): Promise<void> {
         try {
             console.log('🔌 Closing connection with RabbitMQ...');
-            
+
             // Close the channel if it exists
             if (this.channel) {
                 await this.channel.close();
                 console.log('✅ Channel closed correctly');
             }
-            
+
             // Close the connection if it exists
             if (this.connection) {
                 await this.connection.close();
                 console.log('✅ Connection closed correctly');
             }
-            
+
             console.log('👋 Connection with RabbitMQ closed correctly');
         } catch (error) {
             console.error('❌ Error closing the connection with RabbitMQ:', error);
@@ -208,7 +217,11 @@ export const initializeRabbitMQ = async () => {
             name: ENV.RABBIT_QUEUES.WUBI_API_QUEUE,
             replyTo: ENV.RABBIT_QUEUES.WUBI_API_QUEUE_RESPONSE,
             processor: async (msg) => {
-                return await processWubiRabbitResponse(msg);
+                try {
+                    await processWubiRabbitResponse(msg);
+                } catch (error) {
+                    console.error('Error processing WUBI:', error);
+                }
             },
             options: {
                 durable: true,
@@ -221,7 +234,11 @@ export const initializeRabbitMQ = async () => {
             name: ENV.RABBIT_QUEUES.WUPI_API_QUEUE,
             replyTo: ENV.RABBIT_QUEUES.WUPI_API_QUEUE_RESPONSE,
             processor: async (msg) => {
-               return await processWupiRabbitResponse(msg);
+                try {
+                    await processWupiRabbitResponse(msg);
+                } catch (error) {
+                    console.error('Error processing WUPI 1:', error);
+                }
             },
             options: {
                 durable: true,
