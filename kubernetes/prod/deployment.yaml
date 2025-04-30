@@ -32,7 +32,7 @@ spec:
             - name: SOLANA_ENV
               value: devnet
             - name: SOLANA_API_URL
-              value: https://devnet.helius-rpc.com/
+              value: https://mainnet.helius-rpc.com/
             - name: PORT
               value: "80"
             - name: RABBIT_HOST
