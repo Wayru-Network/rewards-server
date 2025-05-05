@@ -87,7 +87,7 @@ export const processRewardsBatch = async (
                 text: `
                     UPDATE ${rewardsPerEpochTable}  
                     SET amount = $1,
-                        status = 'ready-for-claim',
+                        status = 'calculated',
                         owner_payment_status = 'pending',
                         host_payment_status = 'pending',
                         updated_at = $3
@@ -99,4 +99,29 @@ export const processRewardsBatch = async (
         });
 
     await Promise.all(updateQueries.map(query => pool.query(query.text, query.values)));
+}
+
+export const changeRewardsStatusToReadyForClaim = async () => {
+    const client = await pool.connect();
+    try {
+        await client.query('BEGIN');
+        const { rows } = await client.query(
+            `UPDATE ${rewardsPerEpochTable}
+             SET status = 'ready-for-claim'
+             WHERE status = 'calculated'
+             RETURNING id;`
+        );
+
+        console.log('rewards changed to ready-for-claim', rows.length);
+
+        await client.query('COMMIT');
+    } catch (error) {
+        await client.query('ROLLBACK');
+        console.error('Error changing rewards status to ready for claim:', {
+            error,
+            errorMessage: (error as Error).message
+        });
+    } finally {
+        client.release();
+    }
 }
