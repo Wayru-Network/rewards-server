@@ -26,5 +26,6 @@ export type ENV_CONFIG = {
   REWARDS_MODE: 'production' | 'test',
   ENABLE_ERROR_SIMULATION: boolean,
   RABBIT_RATE_LIMIT_PER_SECOND?: number, // Maximum number of messages to process per second
+  DISABLED_REWARD_PROGRAM: 'true' | 'false',
 };
 
