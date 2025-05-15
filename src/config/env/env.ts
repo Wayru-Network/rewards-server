@@ -29,4 +29,5 @@ export const ENV: ENV_CONFIG = {
   REWARDS_MODE: process.env.REWARDS_MODE as 'production' | 'test' || 'test',
   ENABLE_ERROR_SIMULATION: process.env.ENABLE_ERROR_SIMULATION === 'true' || false,
   RABBIT_RATE_LIMIT_PER_SECOND: process.env.RABBIT_RATE_LIMIT_PER_SECOND ? parseInt(process.env.RABBIT_RATE_LIMIT_PER_SECOND, 10) : 40, // Default to 40 messages per second
+  DISABLED_REWARD_PROGRAM: process.env.DISABLED_REWARD_PROGRAM as 'true' | 'false' || 'true', // Default to true
 };
