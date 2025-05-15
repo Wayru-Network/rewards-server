@@ -56,7 +56,6 @@ export const fetchNFNodeEntryWithRetry = async (
     return undefined;
 }
 
-
 function formatNFNodeEntry(entry: NFNodeEntry): NFNodeEntryDetails {
     // Utility function to format WAYRU tokens from lamports
     const formatWayruTokens = (amount: number) => amount / 1_000_000; // 6 decimals

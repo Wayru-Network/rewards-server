@@ -1,5 +1,5 @@
 import { NfNode, NFNodeEntryDetails } from "@interfaces/nfnodes"
-import { getNFNodeById, getNfNodeByWayruDeviceId, getWayruOsLicenseByNFNodeId } from "./queries"
+import { getNFNodeById, getNfNodeByWayruDeviceId, getWayruOsLicenseByNFNodeId, verifyInitializedNFNodeTx } from "./queries"
 import { fetchNFNodeEntryWithRetry } from "@services/solana/reward-system/reward-system.service"
 import { RewardSystem } from "@interfaces/reward-system/reward-system"
 import { Program } from "@coral-xyz/anchor"
@@ -68,6 +68,7 @@ const validateWayruOsLicense = async (nfnodeEntry: NFNodeEntryDetails, nfnodeId:
         reason: 'License is valid'
     }
 }
+
 const checkNFNodeEligibility = async (
     nfnode: Pick<NfNode, 'id' | 'wayru_device_id' | 'model' | 'solana_asset_id'>,
     rewardSystemProgram: Program<RewardSystem> | null,
@@ -80,6 +81,18 @@ const checkNFNodeEligibility = async (
             };
         }
 
+        // if the reward system program is disabled, we need to check if the nfnode
+        // has been initialized into the tx tracker
+        if (ENV.DISABLED_REWARD_PROGRAM === 'true') {
+            const tx = await verifyInitializedNFNodeTx(nfnode.id);
+            if (!tx) {
+                return { isEligible: false, reason: 'NFNode not initialized' };
+            }
+            return { isEligible: true, reason: 'NFNode initialized into tx tracker' };
+        }
+
+        // if the solana env is devnet or the reward system program
+        //  is not initialized, we consider the node eligible
         if (ENV.SOLANA_ENV === 'devnet' || !rewardSystemProgram) {
             return { isEligible: true };
         }

@@ -62,3 +62,22 @@ export const getWayruOsLicenseByNFNodeId = async (nfnodeId: number) => {
   const document = rows?.length > 0 ? rows[0] : null
   return document as NfNodeWayruOsLicense | null
 }
+
+
+export const verifyInitializedNFNodeTx = async (nfnodeId: number) => {
+  try {
+    const tracker = await pool.query(`
+      SELECT tt.id, tt.tx_hash
+      FROM transaction_trackers tt
+      INNER JOIN transaction_trackers_nfnode_links ttnl ON tt.id = ttnl.transaction_tracker_id
+      WHERE tt.transaction_type = 'initialize_nfnode' 
+      AND tt.tx_hash_status = 'success'
+      AND ttnl.nfnode_id = $1
+      `, [nfnodeId])
+    const document = tracker.rows?.length > 0 ? tracker.rows[0] : null
+    return document as { id: number, tx_hash: string } | null
+  } catch (error) {
+    console.log(`Error verifying initialized NFNode tx:`, error);
+    return null;
+  }
+}
