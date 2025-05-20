@@ -56,19 +56,12 @@ class RabbitWrapper {
     public async connect(config: RabbitConfig): Promise<void> {
         try {
             const { user, pass, host } = config;
-            const encodedVhost = encodeURIComponent('/develop');
-            const connectionUrl = `amqp://${user}:${pass}@${host}/${encodedVhost}`;
-            console.log('🔌 Attempting to connect to RabbitMQ with URL:', connectionUrl);
+            const connectionUrl = `amqp://${user}:${pass}@${host}`;
 
-            this.connection = amqp.connect([connectionUrl], {
-                heartbeatIntervalInSeconds: 5,
-                reconnectTimeInSeconds: 5
-            });
-
+            this.connection = amqp.connect([connectionUrl]);
             this.channel = this.connection.createChannel({
                 json: false,
                 setup: async (channel: Channel) => {
-                    console.log('📝 Setting up channel...');
                     // Configure all registered channels
                     for (const [_, queueChannel] of this.channels) {
                         await this.setupChannel(channel, queueChannel);
@@ -76,9 +69,8 @@ class RabbitWrapper {
                 }
             });
 
-            this.connection.on('connect', () => console.log('✅ Successfully connected to RabbitMQ'));
-            this.connection.on('disconnect', (err) => console.log('❌ Disconnected from RabbitMQ:', err));
-            this.connection.on('error', (err) => console.log('🚨 RabbitMQ connection error:', err));
+            this.connection.on('connect', () => console.log('🔌 Connected to RabbitMQ'));
+            this.connection.on('disconnect', (err) => console.log('🔌 Disconnected from RabbitMQ', err));
 
             await this.channel.waitForConnect();
             console.log('🔌 Channel ready');
