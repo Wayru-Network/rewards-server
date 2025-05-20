@@ -1,9 +1,10 @@
 import { Program } from "@coral-xyz/anchor";
 import { RewardSystem } from "@interfaces/reward-system/reward-system";
-import { getKeyPair, SOLANA_API_URL } from "@services/solana";
+import { getKeyPair } from "@services/solana";
 import * as anchor from "@coral-xyz/anchor";
 import { ENV } from "@config/env/env";
 import { getRewardSystemProgramId } from "./reward-system.service";
+import { getSolanaConnection } from "../solana.conection";
 
 /**
  * - This class is used to manage the reward system program
@@ -33,7 +34,7 @@ export class RewardSystemManager {
 
         RewardSystemManager.isInitializing = true;
         try {
-            const connection = new anchor.web3.Connection(SOLANA_API_URL);
+            const connection = getSolanaConnection();
             const solana_wallet = await getKeyPair(ENV.SOLANA_PRIVATE_KEY) as unknown as anchor.web3.Keypair;
 
             const provider = new anchor.AnchorProvider(

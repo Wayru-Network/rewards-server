@@ -7,6 +7,7 @@ import { WubiMessage } from "@interfaces/rabbitmq-wrapper";
 import { RewardSystemManager } from "@services/solana/reward-system/reward-system.manager";
 import { poolMessageTracker } from "@services/pool-per-epoch/pool-messages-tracker.service";
 import { poolPerEpochInstance } from "@services/pool-per-epoch/pool-per-epoch-instance.service";
+import { getBoostStakeMultiplier } from "@services/solana/boost-stake/boost-stake.service";
 
 export const processWubiRabbitResponse = async (msg: ConsumeMessage) => {
     try {
@@ -38,12 +39,16 @@ export const processWubiRabbitResponse = async (msg: ConsumeMessage) => {
 
         // Calculate multiplier
         const multiplier = getNfNodeMultiplier(nfnode)
+
+        // get boost stake multiplier
+        const boostStakeMultiplier = await getBoostStakeMultiplier(nfnode.solana_asset_id)
+
+        // calculate final multiplier
+        const finalMultiplier = multiplier * boostStakeMultiplier
+
         // Create rewards if eligible and hotspot score is greater than 0
         // because we don't need to create rewards with a 0 hotspot score
-        const hotspot_score_multiplied = (hotspot_score ?? 0) * multiplier
-        if (isEligible) {
-            console.log('Wubi isEligible', isEligible, 'hotspot_score_multiplied', hotspot_score_multiplied)
-        }
+        const hotspot_score_multiplied = (hotspot_score ?? 0) * finalMultiplier
         if (isEligible && hotspot_score_multiplied > 0) {
             // Create rewards
             const reward = await createRewardsPerEpoch({
