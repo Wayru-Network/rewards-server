@@ -7,6 +7,7 @@ import { eventHub } from "@services/events/event-hub";
 import { EventName } from "@interfaces/events";
 import { poolMessageTracker } from "@services/pool-per-epoch/pool-messages-tracker.service";
 import { poolPerEpochInstance } from "@services/pool-per-epoch/pool-per-epoch-instance.service";
+import { getBoostStakeMultiplier } from "@services/solana/boost-stake/boost-stake.service";
 
 export const processWupiRabbitResponse = async (msg: ConsumeMessage) => {
     try {
@@ -36,12 +37,15 @@ export const processWupiRabbitResponse = async (msg: ConsumeMessage) => {
 
         // Calculate multiplier
         const multiplier = getNfNodeMultiplier(nfnode)
+        // get boost stake multiplier
+        const boostStakeMultiplier = await getBoostStakeMultiplier(nfnode.solana_asset_id)
+
+        // calculate final multiplier
+        const finalMultiplier = multiplier * boostStakeMultiplier
+
         // Calculate score
         const scoreInGb = Number(BigInt(score)) / 1000000000;
-        const hotspot_score = Number((scoreInGb > 0 ? scoreInGb * multiplier : 0).toFixed(6))
-        if (isEligible) {
-            console.log('Wupi isEligible', isEligible, 'hotspot_score', hotspot_score)
-        }
+        const hotspot_score = Number((scoreInGb > 0 ? scoreInGb * finalMultiplier : 0).toFixed(6))
         // Create rewards if eligible and hotspot score is greater than 0
         // because we don't need to create rewards with a 0 hotspot score
         if (isEligible && hotspot_score > 0) {
