@@ -50,7 +50,7 @@ spec:
             - name: RABBIT_RATE_LIMIT_PER_SECOND
               value: "7"
             - name: DISABLED_REWARD_PROGRAM
-              value: "true"
+              value: "false"
             - name: NAS_API_KEY
               valueFrom:
                 secretKeyRef:
