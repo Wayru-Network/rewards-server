@@ -400,7 +400,11 @@ export const deleteRewardsByPoolPerEpochId = async (
                     INNER JOIN rewards_per_epoches_pool_per_epoch_links rpepl 
                     ON rpe.id = rpepl.rewards_per_epoch_id
                     WHERE rpepl.pool_per_epoch_id = $1 AND 
-                    (rpe.owner_payment_status = 'paid' OR rpe.host_payment_status = 'paid')
+                    (rpe.owner_payment_status = 'paid' OR
+                     rpe.host_payment_status = 'paid' OR
+                     rpe.owner_payment_status = 'claiming' OR
+                     rpe.host_payment_status = 'claiming'
+                     )
                     AND rpe.type = $2
                     LIMIT 1
                 `,
@@ -458,7 +462,11 @@ export const deleteRewardsByPoolPerEpochId = async (
                     INNER JOIN rewards_per_epoches_pool_per_epoch_links rpepl 
                     ON rpe.id = rpepl.rewards_per_epoch_id
                     WHERE rpepl.pool_per_epoch_id = $1 AND 
-                    (rpe.owner_payment_status = 'paid' OR rpe.host_payment_status = 'paid')
+                    (rpe.owner_payment_status = 'paid' OR
+                     rpe.host_payment_status = 'paid' OR
+                     rpe.owner_payment_status = 'claiming' OR
+                     rpe.host_payment_status = 'claiming'
+                     )
                     LIMIT 1
                 `,
                     [poolPerEpochId]
