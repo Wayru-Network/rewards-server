@@ -349,3 +349,15 @@ export const regenerateRewards = async () => {
         console.error("regenerateRewards error", error);
     }
 };
+
+
+export const getPoolPerEpochAmounts = async (epochDate: Date) => {
+    const { ubiAmount, upiAmount } =
+        await getPoolPerEpochAmountsMainnet(epochDate);
+    const wayruPoolUbi = formatPoolNumber(ubiAmount).numValue;
+    const wayruPoolUpi = formatPoolNumber(upiAmount).numValue;
+    return {
+        wayruPoolUbi,
+        wayruPoolUpi,
+    };
+};

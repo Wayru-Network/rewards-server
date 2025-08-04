@@ -19,7 +19,7 @@ import {
     getPoolPerEpochNumber,
     updatePoolPerEpochById,
 } from "@services/pool-per-epoch/queries";
-import { getPoolPerEpochAmount } from "@services/pool-per-epoch/pool-per-epoch.service";
+import { getPoolPerEpochAmount, getPoolPerEpochAmounts } from "@services/pool-per-epoch/pool-per-epoch.service";
 import { rabbitWrapper } from "@services/rabbitmq-wrapper/rabbitmq.service";
 import { eventHub } from "@services/events/event-hub";
 import { EventName } from "@interfaces/events";
@@ -82,6 +82,11 @@ export const initiateRewardsProcessing = async (
         if (poolId) {
             // Get the epoch from the global instance
             epoch = await poolPerEpochInstance.getById(poolId);
+            if ((!epoch?.ubi_pool || !epoch?.upi_pool) && epoch) {
+                const { wayruPoolUbi, wayruPoolUpi } = await getPoolPerEpochAmounts(epoch?.epoch as Date);
+                epoch.ubi_pool = Number(wayruPoolUpi.toFixed(6));
+                epoch.upi_pool = Number(wayruPoolUbi.toFixed(6));
+            }
 
             if (!epoch) {
                 console.log("❌ No epoch found, ending process");
