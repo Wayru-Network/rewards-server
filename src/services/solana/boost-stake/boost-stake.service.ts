@@ -20,11 +20,8 @@ export const getBoostStakeMultiplier = async (solanaAssetId: string) => {
     return 1;
   }
 
-  console.log('boost stake entry found', entry)
-
   const multiplier = (entry?.depositAmount / 100000) + 1;
   // if multiplier is greater than 2, It will be 2
-  console.log('multiplier', multiplier)
   return multiplier > 2 ? 2 : multiplier;
 };
 
