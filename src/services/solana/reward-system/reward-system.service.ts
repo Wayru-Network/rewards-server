@@ -45,7 +45,6 @@ export const fetchNFNodeEntryWithRetry = async (
             }
             // If account not found error, don't retry
             if (typeof error.message === 'string' && error.message.includes('Account does not exist or has no data')) {
-                console.warn(`Entry not found for ${solanaAssetId}:`);
                 return undefined;
             }
             // Other errors, throw
