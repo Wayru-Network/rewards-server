@@ -30,7 +30,7 @@ spec:
             - name: REWARDS_MODE
               value: production
             - name: SOLANA_ENV
-              value: devnet
+              value: mainnet
             - name: SOLANA_API_URL
               value: https://mainnet.helius-rpc.com/
             - name: PORT
