@@ -112,6 +112,11 @@ export const initiateRewardsProcessing = async (
                         ...defaultUpdateData.processing_metrics,
                     },
                 } as Partial<PoolPerEpochEntry>;
+            } else if (regenerate_type === 'both') {
+                defaultUpdateData = {
+                    ...epoch,
+                    ...defaultUpdateData,
+                } as Partial<PoolPerEpochEntry>;
             }
 
             // make a single update to the database
