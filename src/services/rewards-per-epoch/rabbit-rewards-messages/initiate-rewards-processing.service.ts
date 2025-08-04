@@ -63,6 +63,21 @@ export const initiateRewardsProcessing = async (
 
         // Get or create epoch, using poolPerEpochInstance to load the pool
         let epoch: PoolPerEpoch | null;
+        let defaultUpdateData = {
+            wubi_processing_status: "sending_messages",
+            wupi_processing_status: "sending_messages",
+            wubi_nfnodes_total: wubiNFNodes.length,
+            wupi_nfnodes_total: wupiNFNodes.length,
+            wubi_messages_sent: 0,
+            wupi_messages_sent: 0,
+            wubi_messages_received: 0,
+            wupi_messages_received: 0,
+            processing_metrics: {
+                startTime: startTime,
+                totalWubiNFNodes: wubiNFNodes.length,
+                totalWupiNFNodes: wupiNFNodes.length,
+            },
+        } as Partial<PoolPerEpochEntry>;
 
         if (poolId) {
             // Get the epoch from the global instance
@@ -73,28 +88,29 @@ export const initiateRewardsProcessing = async (
                 return { error: true, message: "No epoch found" };
             }
 
+
             // Update the necessary fields for the epoch
-            const updateData = {
-                wubi_processing_status: "sending_messages",
-                wupi_processing_status: "sending_messages",
-                wubi_nfnodes_total: wubiNFNodes.length,
-                wupi_nfnodes_total: wupiNFNodes.length,
-                wubi_messages_sent: 0,
-                wupi_messages_sent: 0,
-                wubi_messages_received: 0,
-                wupi_messages_received: 0,
-                network_score: 0,
-                network_score_upi: 0,
-                processing_metrics: {
-                    ...epoch.processing_metrics,
-                    startTime: startTime,
-                    totalWubiNFNodes: wubiNFNodes.length,
-                    totalWupiNFNodes: wupiNFNodes.length,
-                },
-            } as Partial<PoolPerEpochEntry>;
+            if (regenerate_type && regenerate_type !== 'both') {
+                defaultUpdateData = {
+                    wubi_processing_status: regenerate_type === 'wUBI' ? "sending_messages" : epoch?.wubi_processing_status,
+                    wupi_processing_status: regenerate_type === 'wUPI' ? "sending_messages" : epoch?.wupi_processing_status,
+                    wubi_nfnodes_total: regenerate_type === 'wUBI' ? wubiNFNodes.length : epoch?.wubi_nfnodes_total,
+                    wupi_nfnodes_total: regenerate_type === 'wUPI' ? wupiNFNodes.length : epoch?.wupi_nfnodes_total,
+                    wubi_messages_sent: regenerate_type === 'wUBI' ? 0 : epoch?.wubi_messages_sent,
+                    wupi_messages_sent: regenerate_type === 'wUPI' ? 0 : epoch?.wupi_messages_sent,
+                    wubi_messages_received: regenerate_type === 'wUBI' ? 0 : epoch?.wubi_messages_received,
+                    wupi_messages_received: regenerate_type === 'wUPI' ? 0 : epoch?.wupi_messages_received,
+                    network_score: regenerate_type === 'wUBI' ? 0 : epoch?.network_score,
+                    network_score_upi: regenerate_type === 'wUPI' ? 0 : epoch?.network_score_upi,
+                    processing_metrics: {
+                        ...epoch.processing_metrics,
+                        ...defaultUpdateData.processing_metrics,
+                    },
+                } as Partial<PoolPerEpochEntry>;
+            }
 
             // make a single update to the database
-            const updatedEpoch = await updatePoolPerEpochById(poolId, updateData);
+            const updatedEpoch = await updatePoolPerEpochById(poolId, defaultUpdateData);
             if (!updatedEpoch) {
                 console.log("❌ Error updating pool per epoch");
                 return { error: true, message: "Error updating pool per epoch" };
@@ -105,21 +121,7 @@ export const initiateRewardsProcessing = async (
             epoch = updatedEpoch;
         } else {
             // Create new pool
-            epoch = await createCurrentPoolPerEpoch({
-                wubi_processing_status: "sending_messages",
-                wupi_processing_status: "sending_messages",
-                wubi_nfnodes_total: wubiNFNodes.length,
-                wupi_nfnodes_total: wupiNFNodes.length,
-                wubi_messages_sent: 0,
-                wupi_messages_sent: 0,
-                wubi_messages_received: 0,
-                wupi_messages_received: 0,
-                processing_metrics: {
-                    startTime: startTime,
-                    totalWubiNFNodes: wubiNFNodes.length,
-                    totalWupiNFNodes: wupiNFNodes.length,
-                },
-            });
+            epoch = await createCurrentPoolPerEpoch(defaultUpdateData);
 
             if (!epoch) {
                 console.log("❌ No epoch created, ending process");
