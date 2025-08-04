@@ -223,7 +223,7 @@ export const updatePoolPerEpochById = async (
             RETURNING *
         `;
 
-            const result = await client.query(query, Object.values(validFields));
+            await client.query(query, Object.values(validFields));
             await client.query("COMMIT");
             const documentsUpdated = (await client.query(`SELECT * FROM ${poolPerEpochTable} WHERE id = $1`, [id])) as {
                 rows: PoolPerEpoch[];
@@ -416,7 +416,7 @@ export const deleteRewardsByPoolPerEpochId = async (
                     return {
                         error: true,
                         message:
-                            "There are rewards claimed with relation to the pool per epoch",
+                            "There are rewards claimed or claiming with relation to the pool per epoch",
                         rewardsDeleted: 0,
                     };
                 }
@@ -477,7 +477,7 @@ export const deleteRewardsByPoolPerEpochId = async (
                     return {
                         error: true,
                         message:
-                            "There are rewards claimed with relation to the pool per epoch",
+                            "There are rewards claimed or claiming with relation to the pool per epoch",
                         rewardsDeleted: 0,
                     };
                 }
