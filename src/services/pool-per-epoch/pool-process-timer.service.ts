@@ -65,8 +65,8 @@ export class PoolProcessTimer {
         if (!pool) return;
 
         const processingTime = this.calculateProcessingTime(pool);
-        const totalNodes = type === 'wubi' 
-            ? this.processData.totalWubiNFNodes 
+        const totalNodes = type === 'wubi'
+            ? this.processData.totalWubiNFNodes
             : this.processData.totalWupiNFNodes;
 
         console.log(`🔔 ${type.toUpperCase()} process completed`, {
@@ -92,8 +92,8 @@ export class PoolProcessTimer {
     }
 
     private async checkCompletion(pool: PoolPerEpoch) {
-        const bothCompleted = 
-            pool.wubi_processing_status === 'messages_processed' && 
+        const bothCompleted =
+            pool.wubi_processing_status === 'messages_processed' &&
             pool.wupi_processing_status === 'messages_processed';
         const totalNodes = pool.wubi_nfnodes_total + pool.wupi_nfnodes_total;
 
@@ -114,14 +114,15 @@ export class PoolProcessTimer {
             };
 
             console.log('🔔 All processes completed', result);
-                await updatePoolPerEpochById(pool.id, {
-                    processing_metrics: result,
-                    is_retrying: pool?.is_retrying  ? false : pool?.is_retrying
-                });
-                // Clean up the reward system manager
-                RewardSystemManager.cleanup();
-                poolMessageTracker.clearCache(pool.id.toString());
-                poolPerEpochInstance.clearAllInstances();
+            await updatePoolPerEpochById(pool.id, {
+                processing_metrics: result,
+                is_retrying: pool?.is_retrying ? false : pool?.is_retrying,
+                regenerate_rewards_status: pool?.regenerate_rewards_status === "regenerating_rewards" ? "rewards_regenerated" : pool?.regenerate_rewards_status
+            });
+            // Clean up the reward system manager
+            RewardSystemManager.cleanup();
+            poolMessageTracker.clearCache(pool.id.toString());
+            poolPerEpochInstance.clearAllInstances();
 
             this.resetProcess();
         }
@@ -130,7 +131,7 @@ export class PoolProcessTimer {
     private calculateProcessingTime(pool: PoolPerEpoch): number {
         // Try to get startTime from the pool first
         const poolStartTime = pool.processing_metrics?.startTime as string;
-        
+
         // If it doesn't exist in the pool, use the state
         const startTimeToUse = poolStartTime || this.processData?.startTime;
 

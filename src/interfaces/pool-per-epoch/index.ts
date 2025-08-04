@@ -1,6 +1,9 @@
 import { RewardPerEpochEntry } from "@interfaces/rewards-per-epoch";
 
 type ProcessingStatus = "sending_messages" | "messages_sent" | "receiving_messages" | "messages_received" | "processing_messages" | "messages_processed" | "messages_not_sent"
+export type RegenerateRewardsType = RewardPerEpochEntry['type'] | "both"
+export type RegenerateRewardsStatus = "regenerating_rewards" | "rewards_regenerated" | "pending_regenerate_rewards" | "error_regenerating_rewards"
+
 export interface PoolPerEpoch {
     id: number;
     epoch: Date;
@@ -27,7 +30,9 @@ export interface PoolPerEpoch {
     wupi_retry_count?: number,
     is_retrying?: boolean,
     total_hotspot_pool?: number,
-    epoch_number?: number
+    epoch_number?: number,
+    regenerate_rewards_type?: RegenerateRewardsType,
+    regenerate_rewards_status?: RegenerateRewardsStatus
 }
 
 
