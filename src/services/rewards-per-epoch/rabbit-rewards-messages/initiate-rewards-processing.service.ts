@@ -75,16 +75,16 @@ export const initiateRewardsProcessing = async (
 
             // Update the necessary fields for the epoch
             const updateData = {
-                wubi_processing_status: "sending_messages",
-                wupi_processing_status: "sending_messages",
-                wubi_nfnodes_total: wubiNFNodes.length,
-                wupi_nfnodes_total: wupiNFNodes.length,
-                wubi_messages_sent: 0,
-                wupi_messages_sent: 0,
-                wubi_messages_received: 0,
-                wupi_messages_received: 0,
-                network_score: 0,
-                network_score_upi: 0,
+                wubi_processing_status: regenerate_type === 'wUBI' ? "sending_messages" : epoch?.wubi_processing_status,
+                wupi_processing_status: regenerate_type === 'wUPI' ? "sending_messages" : epoch?.wupi_processing_status,
+                wubi_nfnodes_total: regenerate_type === 'wUBI' ? wubiNFNodes.length : epoch?.wubi_nfnodes_total,
+                wupi_nfnodes_total: regenerate_type === 'wUPI' ? wupiNFNodes.length : epoch?.wupi_nfnodes_total,
+                wubi_messages_sent: regenerate_type === 'wUBI' ? 0 : epoch?.wubi_messages_sent,
+                wupi_messages_sent: regenerate_type === 'wUPI' ? 0 : epoch?.wupi_messages_sent,
+                wubi_messages_received: regenerate_type === 'wUBI' ? 0 : epoch?.wubi_messages_received,
+                wupi_messages_received: regenerate_type === 'wUPI' ? 0 : epoch?.wupi_messages_received,
+                network_score: regenerate_type === 'wUBI' ? 0 : epoch?.network_score,
+                network_score_upi: regenerate_type === 'wUPI' ? 0 : epoch?.network_score_upi,
                 processing_metrics: {
                     ...epoch.processing_metrics,
                     startTime: startTime,
