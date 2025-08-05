@@ -84,8 +84,8 @@ export const initiateRewardsProcessing = async (
             epoch = await poolPerEpochInstance.getById(poolId);
             if ((!epoch?.ubi_pool || !epoch?.upi_pool) && epoch) {
                 const { wayruPoolUbi, wayruPoolUpi } = await getPoolPerEpochAmounts(epoch?.epoch as Date);
-                epoch.ubi_pool = Number(wayruPoolUpi.toFixed(6));
-                epoch.upi_pool = Number(wayruPoolUbi.toFixed(6));
+                epoch.ubi_pool = Number(wayruPoolUbi.toFixed(6));
+                epoch.upi_pool = Number(wayruPoolUpi.toFixed(6));
             }
 
             if (!epoch) {
