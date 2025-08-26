@@ -14,6 +14,7 @@ const multipliers: { [key: string]: number } = {
     Eclypse: 1.5,
     Prometheus: 2,
     Genesis: 3,
+    Odyssey: 5,
 }
 
 
