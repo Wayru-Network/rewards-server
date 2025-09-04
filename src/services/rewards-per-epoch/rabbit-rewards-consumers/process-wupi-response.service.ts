@@ -44,7 +44,9 @@ export const processWupiRabbitResponse = async (msg: ConsumeMessage) => {
         const finalMultiplier = multiplier * boostStakeMultiplier
 
         // Calculate score
-        const scoreInGb = Number(BigInt(score)) / 1000000000;
+        const scoreInKb = Number(BigInt(score)) / 1024;
+        const scoreInMb = scoreInKb / 1024;
+        const scoreInGb = scoreInMb / 1024;
         const hotspot_score = Number((scoreInGb > 0 ? scoreInGb * finalMultiplier : 0).toFixed(6))
         // Create rewards if eligible and hotspot score is greater than 0
         // because we don't need to create rewards with a 0 hotspot score
