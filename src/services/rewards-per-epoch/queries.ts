@@ -9,7 +9,7 @@ export const createRewardsPerEpoch = async (payload: RewardPerEpochEntry) => {
     try {
         const {
             host_payment_status, hotspot_score, amount, currency,
-            status, nfnode, owner_payment_status, type, pool_per_epoch
+            status, nfnode, owner_payment_status, type, pool_per_epoch, depin_stake_multiplier
         } = payload;
 
         // start transaction
@@ -24,8 +24,8 @@ export const createRewardsPerEpoch = async (payload: RewardPerEpochEntry) => {
 
         const insertResult = await client.query(`
             INSERT INTO ${rewardsPerEpochTable} 
-            (type, hotspot_score, amount, owner_payment_status, host_payment_status, status, currency, created_at)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+            (type, hotspot_score, amount, owner_payment_status, host_payment_status, status, currency, depin_stake_multiplier, created_at)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
             RETURNING id
         `, [
             type,
@@ -35,6 +35,7 @@ export const createRewardsPerEpoch = async (payload: RewardPerEpochEntry) => {
             host_payment_status,
             status,
             currency,
+            depin_stake_multiplier,
             new Date()]);
 
         if (!insertResult.rows[0]?.id) {

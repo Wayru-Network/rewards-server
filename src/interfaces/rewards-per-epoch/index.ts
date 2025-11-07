@@ -12,6 +12,7 @@ export interface RewardPerEpochEntry {
     nfnode: number
     owner_payment_status: PaymentStatus
     host_payment_status: PaymentStatus
+    depin_stake_multiplier: number
 }
 
 export interface RewardPerEpoch extends RewardPerEpochEntry {
