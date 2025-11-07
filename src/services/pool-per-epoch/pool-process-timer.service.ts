@@ -5,6 +5,7 @@ import { RewardSystemManager } from "@services/solana/reward-system/reward-syste
 import { PoolPerEpoch } from "@interfaces/pool-per-epoch";
 import { poolMessageTracker } from "@services/pool-per-epoch/pool-messages-tracker.service";
 import { poolPerEpochInstance } from "./pool-per-epoch-instance.service";
+import { calculateDepinStakeRewards } from "@services/depin-stake-rewards/depin-stake.rewards.service";
 
 export class PoolProcessTimer {
     private processData: {
@@ -65,8 +66,8 @@ export class PoolProcessTimer {
         if (!pool) return;
 
         const processingTime = this.calculateProcessingTime(pool);
-        const totalNodes = type === 'wubi' 
-            ? this.processData.totalWubiNFNodes 
+        const totalNodes = type === 'wubi'
+            ? this.processData.totalWubiNFNodes
             : this.processData.totalWupiNFNodes;
 
         console.log(`🔔 ${type.toUpperCase()} process completed`, {
@@ -92,8 +93,8 @@ export class PoolProcessTimer {
     }
 
     private async checkCompletion(pool: PoolPerEpoch) {
-        const bothCompleted = 
-            pool.wubi_processing_status === 'messages_processed' && 
+        const bothCompleted =
+            pool.wubi_processing_status === 'messages_processed' &&
             pool.wupi_processing_status === 'messages_processed';
         const totalNodes = pool.wubi_nfnodes_total + pool.wupi_nfnodes_total;
 
@@ -114,14 +115,17 @@ export class PoolProcessTimer {
             };
 
             console.log('🔔 All processes completed', result);
-                await updatePoolPerEpochById(pool.id, {
-                    processing_metrics: result,
-                    is_retrying: pool?.is_retrying  ? false : pool?.is_retrying
-                });
-                // Clean up the reward system manager
-                RewardSystemManager.cleanup();
-                poolMessageTracker.clearCache(pool.id.toString());
-                poolPerEpochInstance.clearAllInstances();
+            await updatePoolPerEpochById(pool.id, {
+                processing_metrics: result,
+                is_retrying: pool?.is_retrying ? false : pool?.is_retrying
+            });
+            // Clean up the reward system manager
+            RewardSystemManager.cleanup();
+            poolMessageTracker.clearCache(pool.id.toString());
+            poolPerEpochInstance.clearAllInstances();
+
+            //calculate depin stake rewards for the pool
+            calculateDepinStakeRewards(pool.id);
 
             this.resetProcess();
         }
@@ -130,7 +134,7 @@ export class PoolProcessTimer {
     private calculateProcessingTime(pool: PoolPerEpoch): number {
         // Try to get startTime from the pool first
         const poolStartTime = pool.processing_metrics?.startTime as string;
-        
+
         // If it doesn't exist in the pool, use the state
         const startTimeToUse = poolStartTime || this.processData?.startTime;
 

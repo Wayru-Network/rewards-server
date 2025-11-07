@@ -37,3 +37,13 @@ export interface WUBIMessage {
     epoch_id: number
     last_item: boolean
 }
+
+
+export interface RewardsPerEpochToCalculateDepinStakeRewards {
+    id: number
+    type: Type
+    nfnode_id: number
+    amount: number
+    hotspot_score: number
+    depin_stake_multiplier: number
+}
