@@ -62,6 +62,7 @@ export const calculateDepinStakeRewards = async (poolPerEpochId: number) => {
         await updateRewardsPerEpochAmount({
             rewardsPerEpochId: item.id,
             amount: hotspotRewards,
+            totalAmountWithDepinStake: totalAmountPerRewardPerEpoch
         });
 
         // assign the rewards to the nfnode

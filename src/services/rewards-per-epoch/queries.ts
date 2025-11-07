@@ -196,15 +196,20 @@ export const getRewardsPerEpochToCalculateDepinStakeRewards = async (
 export const updateRewardsPerEpochAmount = async ({
     rewardsPerEpochId,
     amount,
+    totalAmountWithDepinStake,  //Total amount include staker rewards percentage
 }: {
     rewardsPerEpochId: number;
     amount: number;
+    totalAmountWithDepinStake: number
 }) => {
     const client = await pool.connect();
     try {
         await client.query(
-            `UPDATE ${rewardsPerEpochTable} SET amount = $1 WHERE id = $2`,
-            [amount, rewardsPerEpochId]
+            `UPDATE ${rewardsPerEpochTable} 
+             SET amount = $1, 
+                 total_amount_with_depin_stake = $2
+             WHERE id = $3`,
+            [amount, totalAmountWithDepinStake, rewardsPerEpochId]
         );
     } catch (error) {
         console.error("Error updating rewards per epoch amount:", {
