@@ -34,7 +34,7 @@ export const createDepinStakeRewards = async (payload: CreateDepinStakeRewards) 
             `INSERT INTO depin_stakes_rewards (type, reward_amount, status, created_at, published_at) 
              VALUES ($1, $2, $3, $4, $5) 
              RETURNING id`,
-            [type, rewardAmount, 'pending', new Date(), new Date()]
+            [type, rewardAmount, 'calculated', new Date(), new Date()]
         );
 
         if (!rows[0]?.id) {
@@ -83,3 +83,28 @@ export const createDepinStakeRewards = async (payload: CreateDepinStakeRewards) 
         client.release();
     }
 }
+
+export const changeDepinStakeRewardsStatusToReadyForClaim = async () => {
+    const client = await pool.connect();
+    try {
+        await client.query("BEGIN");
+        const { rows } = await client.query(
+            `UPDATE depin_stakes_rewards
+             SET status = 'pending'
+             WHERE status = 'calculated'
+             RETURNING id;`
+        );
+
+        console.log("depin stake rewards changed to pending", rows.length);
+
+        await client.query("COMMIT");
+    } catch (error) {
+        await client.query("ROLLBACK");
+        console.error("Error changing depin stake rewards status to pending:", {
+            error,
+            errorMessage: (error as Error).message,
+        });
+    } finally {
+        client.release();
+    }
+};
