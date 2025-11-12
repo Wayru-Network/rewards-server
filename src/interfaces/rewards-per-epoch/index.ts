@@ -12,6 +12,7 @@ export interface RewardPerEpochEntry {
     nfnode: number
     owner_payment_status: PaymentStatus
     host_payment_status: PaymentStatus
+    depin_stake_multiplier: number
 }
 
 export interface RewardPerEpoch extends RewardPerEpochEntry {
@@ -35,4 +36,14 @@ export interface WUBIMessage {
     timestamp: number
     epoch_id: number
     last_item: boolean
+}
+
+
+export interface RewardsPerEpochToCalculateDepinStakeRewards {
+    id: number
+    type: Type
+    nfnode_id: number
+    amount: number
+    hotspot_score: number
+    depin_stake_multiplier: number
 }

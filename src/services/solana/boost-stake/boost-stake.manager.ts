@@ -1,7 +1,7 @@
 import * as anchor from "@coral-xyz/anchor";
 import { ENV } from "@config/env/env";
 import { BoostStake } from "@interfaces/boost-stake/boost-stake";
-import { getSolanaConnection } from "../solana.conection";
+import { getSolanaConnection } from "../solana.connection";
 import { getKeyPair } from "..";
 import { getBoostSystemProgramId } from "./boost-stake.service";
 

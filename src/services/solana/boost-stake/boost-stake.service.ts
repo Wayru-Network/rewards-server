@@ -47,8 +47,8 @@ export const getBoostStakeEntry = async (solanaAssetId: string) => {
       depositUnixTimestamp: stakeEntry?.depositTimestamp?.toNumber(),
     };
   } catch (error) {
-    console.log(
-      "Error getting stake program state entry",
+    console.info(
+      "🚨 Error getting stake program state entry",
       error instanceof Error ? error.message : "Unknown error"
     );
     return undefined;
