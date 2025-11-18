@@ -1,4 +1,3 @@
-
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -14,9 +13,9 @@ spec:
         app: rewards-server
     spec:
       containers:
-      - name: rewards-server
-        image: ${CONTAINER_REGISTRY}/rewards-server:${IMAGE_TAG}
-        env:
+        - name: rewards-server
+          image: ${CONTAINER_REGISTRY}/rewards-server:${IMAGE_TAG}
+          env:
             - name: DATABASE_HOST
               value: "57.151.72.86"
             - name: DATABASE_NAME
@@ -30,7 +29,7 @@ spec:
             - name: REWARDS_MODE
               value: production
             - name: SOLANA_ENV
-              value: devnet
+              value: mainnet
             - name: SOLANA_API_URL
               value: https://mainnet.helius-rpc.com/
             - name: PORT
@@ -48,9 +47,9 @@ spec:
             - name: NAS_API
               value: https://nas.api.wayru.tech
             - name: RABBIT_RATE_LIMIT_PER_SECOND
-              value: "15"
+              value: "6"
             - name: DISABLED_REWARD_PROGRAM
-              value: "true"
+              value: "false"
             - name: NAS_API_KEY
               valueFrom:
                 secretKeyRef:
@@ -81,13 +80,13 @@ spec:
                 secretKeyRef:
                   name: rewards-server-secrets
                   key: RABBIT_USER
-            
-        ports:
-        - containerPort: 80
-        resources:
-          requests:
-            cpu: "100m"
-            memory: "128Mi"
-          limits:
-            cpu: "500m"
-            memory: "512Mi"
+
+          ports:
+            - containerPort: 80
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"

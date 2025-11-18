@@ -32,7 +32,6 @@ export const fetchNFNodeEntryWithRetry = async (
             const nfNodeEntry = await program.account.nfNodeEntry.fetch(nfnodeEntryPDA);
             if (!nfNodeEntry) return undefined;
             const formattedNFNodeEntry = formatNFNodeEntry(nfNodeEntry)
-            console.log('entry found for ', solanaAssetId, formattedNFNodeEntry)
             return formattedNFNodeEntry;
         } catch (error: any) {
             // If rate limit error, retry
@@ -45,7 +44,6 @@ export const fetchNFNodeEntryWithRetry = async (
             }
             // If account not found error, don't retry
             if (typeof error.message === 'string' && error.message.includes('Account does not exist or has no data')) {
-                console.warn(`Entry not found for ${solanaAssetId}:`);
                 return undefined;
             }
             // Other errors, throw
