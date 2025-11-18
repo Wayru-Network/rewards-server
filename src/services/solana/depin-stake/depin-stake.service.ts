@@ -10,7 +10,7 @@ export const getDepinProgramId = async () => {
     // default reward system program id if there is no key
     const DEFAULT_DEPIN_PROGRAM_ID =
         process.env.DEFAULT_DEPIN_PROGRAM_ID ||
-        "ECcNAeDo6TbYpr1bY2e1uybkiNEuRSbxRbqad4r1azK8";
+        "D1sMCRu3tRwCviHUDj69WrRQzDoVKd2m2YKydRyauYmJ";
     const depinProgramId = key?.value ?? DEFAULT_DEPIN_PROGRAM_ID;
     // remove all spaces
     return depinProgramId.replace(/\s/g, "");
