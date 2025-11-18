@@ -5,6 +5,7 @@ import { RewardSystemManager } from "@services/solana/reward-system/reward-syste
 import { PoolPerEpoch } from "@interfaces/pool-per-epoch";
 import { poolMessageTracker } from "@services/pool-per-epoch/pool-messages-tracker.service";
 import { poolPerEpochInstance } from "./pool-per-epoch-instance.service";
+import { calculateDepinStakeRewards } from "@services/depin-stake-rewards/depin-stake.rewards.service";
 
 export class PoolProcessTimer {
     private processData: {
@@ -116,13 +117,15 @@ export class PoolProcessTimer {
             console.log('🔔 All processes completed', result);
             await updatePoolPerEpochById(pool.id, {
                 processing_metrics: result,
-                is_retrying: pool?.is_retrying ? false : pool?.is_retrying,
-                regenerate_rewards_status: pool?.regenerate_rewards_status === "regenerating_rewards" ? "rewards_regenerated" : pool?.regenerate_rewards_status
+                is_retrying: pool?.is_retrying ? false : pool?.is_retrying
             });
             // Clean up the reward system manager
             RewardSystemManager.cleanup();
             poolMessageTracker.clearCache(pool.id.toString());
             poolPerEpochInstance.clearAllInstances();
+
+            //calculate depin stake rewards for the pool
+            calculateDepinStakeRewards(pool.id);
 
             this.resetProcess();
         }

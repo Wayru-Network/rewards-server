@@ -8,6 +8,7 @@ import { EventName } from "@interfaces/events";
 import { poolMessageTracker } from "@services/pool-per-epoch/pool-messages-tracker.service";
 import { poolPerEpochInstance } from "@services/pool-per-epoch/pool-per-epoch-instance.service";
 import { getBoostStakeMultiplier } from "@services/solana/boost-stake/boost-stake.service";
+import { getDepinStakeMultiplier } from "@services/solana/depin-stake/depin-stake.service";
 
 export const processWupiRabbitResponse = async (msg: ConsumeMessage) => {
     try {
@@ -40,8 +41,11 @@ export const processWupiRabbitResponse = async (msg: ConsumeMessage) => {
         // get boost stake multiplier
         const boostStakeMultiplier = await getBoostStakeMultiplier(nfnode.solana_asset_id)
 
+        // get depin stake multiplier
+        const depinStakeMultiplier = await getDepinStakeMultiplier(nfnode.solana_asset_id)
+
         // calculate final multiplier
-        const finalMultiplier = multiplier * boostStakeMultiplier
+        const finalMultiplier = multiplier * boostStakeMultiplier * depinStakeMultiplier
 
         // Calculate score
         const scoreInKb = Number(BigInt(score)) / 1024;
@@ -50,7 +54,10 @@ export const processWupiRabbitResponse = async (msg: ConsumeMessage) => {
         const hotspot_score = Number((scoreInGb > 0 ? scoreInGb * finalMultiplier : 0).toFixed(6))
         // Create rewards if eligible and hotspot score is greater than 0
         // because we don't need to create rewards with a 0 hotspot score
-        if (isEligible && hotspot_score > 0) {
+        const hotspot_score_multiplied = (hotspot_score ?? 0) * finalMultiplier
+
+
+        if (isEligible && hotspot_score_multiplied > 0) {
             // Create rewards
             const reward = await createRewardsPerEpoch({
                 hotspot_score,
@@ -62,6 +69,7 @@ export const processWupiRabbitResponse = async (msg: ConsumeMessage) => {
                 currency: 'WAYRU',
                 owner_payment_status: 'pending',
                 host_payment_status: 'pending',
+                depin_stake_multiplier: depinStakeMultiplier,
             });
 
             if (!reward) {

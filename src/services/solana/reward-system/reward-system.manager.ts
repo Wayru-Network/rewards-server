@@ -4,7 +4,7 @@ import { getKeyPair } from "@services/solana";
 import * as anchor from "@coral-xyz/anchor";
 import { ENV } from "@config/env/env";
 import { getRewardSystemProgramId } from "./reward-system.service";
-import { getSolanaConnection } from "../solana.conection";
+import { getSolanaConnection } from "../solana.connection";
 
 /**
  * - This class is used to manage the reward system program
@@ -46,12 +46,12 @@ export class RewardSystemManager {
             const rewardSystemProgramId = await getRewardSystemProgramId();
             const programId = new anchor.web3.PublicKey(rewardSystemProgramId);
             const idl = await anchor.Program.fetchIdl(programId, provider);
-            
+
             if (!idl) {
                 console.error('❌ Failed to initialize Reward System Program: IDL not found');
                 return null;
             }
-            
+
             RewardSystemManager.instance = await anchor.Program.at(
                 programId,
                 provider

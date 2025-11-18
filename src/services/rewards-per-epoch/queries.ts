@@ -1,6 +1,16 @@
-import pool from "@config/db"
-import { RewardPerEpochEntry, RewardPerEpoch } from "@interfaces/rewards-per-epoch"
-import { checkExistingRewardQuery, insertRewardsPerEpochNFNodeLinksQuery, insertRewardsPerEpochPoolPerEpochLinksQuery, returnRewardsPerEpochQuery, rewardsPerEpochTable } from "./helpers";
+import pool from "@config/db";
+import {
+    RewardPerEpochEntry,
+    RewardPerEpoch,
+    RewardsPerEpochToCalculateDepinStakeRewards,
+} from "@interfaces/rewards-per-epoch";
+import {
+    checkExistingRewardQuery,
+    insertRewardsPerEpochNFNodeLinksQuery,
+    insertRewardsPerEpochPoolPerEpochLinksQuery,
+    returnRewardsPerEpochQuery,
+    rewardsPerEpochTable,
+} from "./helpers";
 import { roundDownTo6Decimals } from "@utils/numbers.utils";
 import { UpdatePoolNetworkScoreResponse } from "@interfaces/pool-per-epoch";
 
@@ -8,61 +18,80 @@ export const createRewardsPerEpoch = async (payload: RewardPerEpochEntry) => {
     const client = await pool.connect();
     try {
         const {
-            host_payment_status, hotspot_score, amount, currency,
-            status, nfnode, owner_payment_status, type, pool_per_epoch
+            host_payment_status,
+            hotspot_score,
+            amount,
+            currency,
+            status,
+            nfnode,
+            owner_payment_status,
+            type,
+            pool_per_epoch,
+            depin_stake_multiplier,
         } = payload;
 
         // start transaction
-        await client.query('BEGIN');
+        await client.query("BEGIN");
 
         // a nfnode can have only one reward per epoch with the same type and pool_per_epoch
-        const { rows } = await client.query(checkExistingRewardQuery(nfnode, type, pool_per_epoch));
-        const existDocument = rows?.length > 0 ? rows[0] : null as RewardPerEpoch['id'] | null;
+        const { rows } = await client.query(
+            checkExistingRewardQuery(nfnode, type, pool_per_epoch)
+        );
+        const existDocument =
+            rows?.length > 0 ? rows[0] : (null as RewardPerEpoch["id"] | null);
         if (existDocument) {
             return existDocument;
         }
 
-        const insertResult = await client.query(`
+        const insertResult = await client.query(
+            `
             INSERT INTO ${rewardsPerEpochTable} 
-            (type, hotspot_score, amount, owner_payment_status, host_payment_status, status, currency, created_at)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+            (type, hotspot_score, amount, owner_payment_status, host_payment_status, status, currency, depin_stake_multiplier, created_at)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
             RETURNING id
-        `, [
-            type,
-            hotspot_score,
-            amount ?? 0,
-            owner_payment_status,
-            host_payment_status,
-            status,
-            currency,
-            new Date()]);
+        `,
+            [
+                type,
+                hotspot_score,
+                amount ?? 0,
+                owner_payment_status,
+                host_payment_status,
+                status,
+                currency,
+                depin_stake_multiplier,
+                new Date(),
+            ]
+        );
 
         if (!insertResult.rows[0]?.id) {
             throw new Error(`Failed to insert into ${rewardsPerEpochTable}`);
         }
-        const rewardId = insertResult.rows[0].id as number
+        const rewardId = insertResult.rows[0].id as number;
 
         // 2. Insert in rewards_per_epoches_nfnode_links
         await client.query(insertRewardsPerEpochNFNodeLinksQuery(rewardId, nfnode));
 
         // 3. Insert in rewards_per_epoches_pool_per_epoch_links
-        await client.query(insertRewardsPerEpochPoolPerEpochLinksQuery(rewardId, pool_per_epoch));
+        await client.query(
+            insertRewardsPerEpochPoolPerEpochLinksQuery(rewardId, pool_per_epoch)
+        );
 
-        await client.query('COMMIT');
+        await client.query("COMMIT");
 
         // return the complete document
-        const { rows: [result] } = await client.query(returnRewardsPerEpochQuery(rewardId));
+        const {
+            rows: [result],
+        } = await client.query(returnRewardsPerEpochQuery(rewardId));
 
-        return result as RewardPerEpoch
-
+        return result as RewardPerEpoch;
     } catch (error) {
-        await client.query('ROLLBACK');
-        console.error('Error creating reward per epoch:', {
+        await client.query("ROLLBACK");
+        console.error("Error creating reward per epoch:", {
             error,
             payload,
             errorMessage: (error as Error).message,
             detail: (error as any).detail,
-            constraint: (error as any).constraint
+            constraint: (error as any).constraint,
         });
         throw error; // Propagate the error instead of returning undefined
     } finally {
@@ -70,21 +99,18 @@ export const createRewardsPerEpoch = async (payload: RewardPerEpochEntry) => {
     }
 };
 
-
-export const processRewardsBatch = async (
-    params: {
-        rewards: UpdatePoolNetworkScoreResponse['rewards'],
-        networkScore: number,
-        totalRewardsAmount: number
-    },
-) => {
+export const processRewardsBatch = async (params: {
+    rewards: UpdatePoolNetworkScoreResponse["rewards"];
+    networkScore: number;
+    totalRewardsAmount: number;
+}) => {
     const { rewards, networkScore, totalRewardsAmount } = params;
-    const updateQueries = rewards
-        .map(reward => {
-            const proportionalShare = (reward.hotspot_score / networkScore) * totalRewardsAmount;
-            const amount = Number(roundDownTo6Decimals(proportionalShare));
-            return {
-                text: `
+    const updateQueries = rewards.map((reward) => {
+        const proportionalShare =
+            (reward.hotspot_score / networkScore) * totalRewardsAmount;
+        const amount = Number(roundDownTo6Decimals(proportionalShare));
+        return {
+            text: `
                     UPDATE ${rewardsPerEpochTable}  
                     SET amount = $1,
                         status = 'calculated',
@@ -94,17 +120,19 @@ export const processRewardsBatch = async (
                     WHERE id = $2
                     AND status != 'ready-for-claim' 
                 `,
-                values: [amount, reward.id, new Date()]
-            };
-        });
+            values: [amount, reward.id, new Date()],
+        };
+    });
 
-    await Promise.all(updateQueries.map(query => pool.query(query.text, query.values)));
-}
+    await Promise.all(
+        updateQueries.map((query) => pool.query(query.text, query.values))
+    );
+};
 
 export const changeRewardsStatusToReadyForClaim = async () => {
     const client = await pool.connect();
     try {
-        await client.query('BEGIN');
+        await client.query("BEGIN");
         const { rows } = await client.query(
             `UPDATE ${rewardsPerEpochTable}
              SET status = 'ready-for-claim'
@@ -112,16 +140,84 @@ export const changeRewardsStatusToReadyForClaim = async () => {
              RETURNING id;`
         );
 
-        console.log('rewards changed to ready-for-claim', rows.length);
+        console.log("rewards changed to ready-for-claim", rows.length);
 
-        await client.query('COMMIT');
+        await client.query("COMMIT");
     } catch (error) {
-        await client.query('ROLLBACK');
-        console.error('Error changing rewards status to ready for claim:', {
+        await client.query("ROLLBACK");
+        console.error("Error changing rewards status to ready for claim:", {
             error,
-            errorMessage: (error as Error).message
+            errorMessage: (error as Error).message,
         });
     } finally {
         client.release();
     }
-}
+};
+
+export const getRewardsPerEpochToCalculateDepinStakeRewards = async (
+    poolPerEpochId: number
+): Promise<RewardsPerEpochToCalculateDepinStakeRewards[]> => {
+    const client = await pool.connect();
+    try {
+        const { rows } = await client.query(
+            `SELECT rpe.id, rpe.type, rnl.nfnode_id, rpe.amount, rpe.hotspot_score, rpe.depin_stake_multiplier
+        FROM rewards_per_epoches rpe
+        INNER JOIN rewards_per_epoches_pool_per_epoch_links rpel 
+            ON rpe.id = rpel.rewards_per_epoch_id
+        INNER JOIN rewards_per_epoches_nfnode_links rnl
+            ON rpe.id = rnl.rewards_per_epoch_id
+        WHERE rpel.pool_per_epoch_id = $1
+        AND rpe.depin_stake_multiplier > 1 
+        AND rpe.status = 'calculated'
+        AND EXISTS (
+            SELECT 1
+            FROM hotspot_stake_nfnode_links hsnl
+            INNER JOIN hotspot_stake hs ON hsnl.hotspots_stakes_id = hs.id
+            WHERE hsnl.nfnode_id = rnl.nfnode_id
+            AND hs.status = 'staked'
+        );`,
+            [poolPerEpochId]
+        );
+        return rows;
+    } catch (error) {
+        console.error(
+            "Error getting rewards per epoch to calculate depin stake rewards:",
+            {
+                error,
+                errorMessage: (error as Error).message,
+            }
+        );
+        return [];
+    } finally {
+        client.release();
+    }
+};
+
+export const updateRewardsPerEpochAmount = async ({
+    rewardsPerEpochId,
+    amount,
+    totalAmountWithDepinStake,  //Total amount include staker rewards percentage
+}: {
+    rewardsPerEpochId: number;
+    amount: number;
+    totalAmountWithDepinStake: number
+}) => {
+    const client = await pool.connect();
+    try {
+        await client.query(
+            `UPDATE ${rewardsPerEpochTable} 
+             SET amount = $1, 
+                 total_amount_with_depin_stake = $2
+             WHERE id = $3`,
+            [amount, totalAmountWithDepinStake, rewardsPerEpochId]
+        );
+    } catch (error) {
+        console.error("Error updating rewards per epoch amount:", {
+            error,
+            errorMessage: (error as Error).message,
+        });
+        throw error;
+    } finally {
+        client.release();
+    }
+};

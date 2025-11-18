@@ -8,6 +8,7 @@ import { RewardSystemManager } from "@services/solana/reward-system/reward-syste
 import { poolMessageTracker } from "@services/pool-per-epoch/pool-messages-tracker.service";
 import { poolPerEpochInstance } from "@services/pool-per-epoch/pool-per-epoch-instance.service";
 import { getBoostStakeMultiplier } from "@services/solana/boost-stake/boost-stake.service";
+import { getDepinStakeMultiplier } from "@services/solana/depin-stake/depin-stake.service";
 
 export const processWubiRabbitResponse = async (msg: ConsumeMessage) => {
     try {
@@ -29,6 +30,7 @@ export const processWubiRabbitResponse = async (msg: ConsumeMessage) => {
         // Check eligibility
         const { isEligible, nfnode } = await getEligibleWubiNFNodes(wayru_device_id, rewardSystemProgram);
 
+
         // validate epoch id 
         const epochDocument = await poolPerEpochInstance.getById(epoch_id);
 
@@ -38,17 +40,21 @@ export const processWubiRabbitResponse = async (msg: ConsumeMessage) => {
         }
 
         // Calculate multiplier
-        const multiplier = getNfNodeMultiplier(nfnode)
+        const deviceTypeMultiplier = getNfNodeMultiplier(nfnode)
 
         // get boost stake multiplier
         const boostStakeMultiplier = await getBoostStakeMultiplier(nfnode.solana_asset_id)
 
+        // get depin stake multiplier
+        const depinStakeMultiplier = await getDepinStakeMultiplier(nfnode.solana_asset_id)
+
         // calculate final multiplier
-        const finalMultiplier = multiplier * boostStakeMultiplier
+        const finalMultiplier = deviceTypeMultiplier * boostStakeMultiplier * depinStakeMultiplier
 
         // Create rewards if eligible and hotspot score is greater than 0
         // because we don't need to create rewards with a 0 hotspot score
         const hotspot_score_multiplied = (hotspot_score ?? 0) * finalMultiplier
+
         if (isEligible && hotspot_score_multiplied > 0) {
             // Create rewards
             const reward = await createRewardsPerEpoch({
@@ -61,6 +67,7 @@ export const processWubiRabbitResponse = async (msg: ConsumeMessage) => {
                 currency: 'WAYRU',
                 owner_payment_status: 'pending',
                 host_payment_status: 'pending',
+                depin_stake_multiplier: depinStakeMultiplier,
             });
 
             // confirm reward was created
@@ -84,7 +91,6 @@ export const processWubiRabbitResponse = async (msg: ConsumeMessage) => {
                 type: 'wUBI'
             });
         }
-
     } catch (error) {
         console.error('🚨 error processing WUBI rabbit response', error);
         throw error; // Re-throw the error to be handled by the wrapper

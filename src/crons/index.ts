@@ -2,6 +2,7 @@ import cron from 'node-cron';
 import { initiateRewardsProcessing } from '@services/rewards-per-epoch/rabbit-rewards-messages/initiate-rewards-processing.service';
 import { processRewardsAfterError } from '@services/rewards-per-epoch/rewards-per-epoch.service';
 import { changeRewardsStatusToReadyForClaim } from '@services/rewards-per-epoch/queries';
+import { changeDepinStakeRewardsStatusToReadyForClaim } from '@services/depin-stake-rewards/queries';
 import { regenerateRewards } from '@services/pool-per-epoch/pool-per-epoch.service';
 
 export const initializeCronJobs = () => {
@@ -17,6 +18,7 @@ export const initializeCronJobs = () => {
     // change to rewards status to ready-for-claim each tuesday at 6:PM utc
     cron.schedule('0 18 * * 2', () => {
         changeRewardsStatusToReadyForClaim()
+        changeDepinStakeRewardsStatusToReadyForClaim()
     });
     console.log('🕒 Cron jobs initialized');
 };
