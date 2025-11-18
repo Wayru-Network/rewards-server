@@ -24,6 +24,8 @@ spec:
               value: "5432"
             - name: DATABASE_USERNAME
               value: REWARDS_SERVER
+            - name: DEFAULT_DEPIN_PROGRAM_ID
+              value: D1sMCRu3tRwCviHUDj69WrRQzDoVKd2m2YKydRyauYmJ
             - name: NODE_ENV
               value: production
             - name: REWARDS_MODE
