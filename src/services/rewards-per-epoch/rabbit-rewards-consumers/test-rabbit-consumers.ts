@@ -8,7 +8,7 @@ export const runTestRabbitConsumers = async () => {
         wayru_device_id: "321654",
         epoch_id: 23,
         last_item: true,
-        hotspot_score: 125,
+        hotspot_score: 1,
     };
     const message = JSON.stringify(payloadTest);
     const messageBuffer = Buffer.from(message);
@@ -20,7 +20,7 @@ export const runTestRabbitConsumers = async () => {
         console.error("error testing wubi message", error);
     });
 
-    // Test Wupi message
+    /* Test Wupi message
     const payloadTestWupi = {
         nas_id: "00:00:00:00:00:00",
         nfnode_id: 67,
@@ -36,5 +36,5 @@ export const runTestRabbitConsumers = async () => {
     console.log("Testing Wupi message");
     await processWupiRabbitResponse(consumeMessageWupi).catch((error) => {
         console.error("error testing wupi message", error);
-    });
+    }); */
 };

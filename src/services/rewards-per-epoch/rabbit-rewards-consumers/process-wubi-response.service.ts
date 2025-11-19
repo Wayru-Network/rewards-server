@@ -1,4 +1,7 @@
-import { getEligibleWubiNFNodes, getNfNodeMultiplier } from "@services/nfnodes/nfnode.service";
+import {
+    getEligibleWubiNFNodes,
+    getNfNodeMultiplier,
+} from "@services/nfnodes/nfnode.service";
 import { ConsumeMessage } from "amqplib";
 import { createRewardsPerEpoch } from "../queries";
 import { eventHub } from "@services/events/event-hub";
@@ -14,46 +17,59 @@ export const processWubiRabbitResponse = async (msg: ConsumeMessage) => {
     try {
         const message = JSON.parse(msg.content.toString());
 
-        const { hotspot_score, wayru_device_id, epoch_id, last_item } = message as WubiMessage;
+        const { hotspot_score, wayru_device_id, epoch_id, last_item } =
+            message as WubiMessage;
         // Validation of the message
-        if (!wayru_device_id || !epoch_id || typeof last_item !== 'boolean') {
-            console.error('invalid Wubi message');
-            console.log(' hotspot_score', hotspot_score);
-            console.log(' wayru_device_id', wayru_device_id);
-            console.log(' epoch_id', epoch_id);
-            console.log(' last_item', last_item);
+        if (!wayru_device_id || !epoch_id || typeof last_item !== "boolean") {
+            console.error("invalid Wubi message");
+            console.log(" hotspot_score", hotspot_score);
+            console.log(" wayru_device_id", wayru_device_id);
+            console.log(" epoch_id", epoch_id);
+            console.log(" last_item", last_item);
         }
 
         // Get instance of RewardSystem
         const rewardSystemProgram = await RewardSystemManager.getInstance();
 
         // Check eligibility
-        const { isEligible, nfnode } = await getEligibleWubiNFNodes(wayru_device_id, rewardSystemProgram);
+        const { isEligible, nfnode } = await getEligibleWubiNFNodes(
+            wayru_device_id,
+            rewardSystemProgram
+        );
 
-
-        // validate epoch id 
+        // validate epoch id
         const epochDocument = await poolPerEpochInstance.getById(epoch_id);
 
         if (!epochDocument) {
-            console.error('epoch not found');
-            return
+            console.error("epoch not found");
+            return;
         }
 
         // Calculate multiplier
-        const deviceTypeMultiplier = getNfNodeMultiplier(nfnode)
+        const deviceTypeMultiplier = getNfNodeMultiplier(nfnode);
 
         // get boost stake multiplier
-        const boostStakeMultiplier = await getBoostStakeMultiplier(nfnode.solana_asset_id)
+        const boostStakeMultiplier = await getBoostStakeMultiplier(
+            nfnode.solana_asset_id
+        );
 
         // get depin stake multiplier
-        const depinStakeMultiplier = await getDepinStakeMultiplier(nfnode.solana_asset_id)
+        const depinStakeMultiplier = await getDepinStakeMultiplier(
+            nfnode.solana_asset_id
+        );
 
         // calculate final multiplier
-        const finalMultiplier = deviceTypeMultiplier * boostStakeMultiplier * depinStakeMultiplier
+        const finalMultiplier = Number(
+            (
+                deviceTypeMultiplier *
+                boostStakeMultiplier *
+                depinStakeMultiplier
+            ).toFixed(1)
+        );
 
         // Create rewards if eligible and hotspot score is greater than 0
         // because we don't need to create rewards with a 0 hotspot score
-        const hotspot_score_multiplied = (hotspot_score ?? 0) * finalMultiplier
+        const hotspot_score_multiplied = (hotspot_score ?? 0) * finalMultiplier;
 
         if (isEligible && hotspot_score_multiplied > 0) {
             // Create rewards
@@ -61,26 +77,26 @@ export const processWubiRabbitResponse = async (msg: ConsumeMessage) => {
                 hotspot_score: hotspot_score_multiplied,
                 nfnode: nfnode.id,
                 pool_per_epoch: epochDocument.id,
-                status: 'calculating',
-                type: 'wUBI',
+                status: "calculating",
+                type: "wUBI",
                 amount: 0,
-                currency: 'WAYRU',
-                owner_payment_status: 'pending',
-                host_payment_status: 'pending',
+                currency: "WAYRU",
+                owner_payment_status: "pending",
+                host_payment_status: "pending",
                 depin_stake_multiplier: depinStakeMultiplier,
             });
 
             // confirm reward was created
             if (!reward) {
-                console.error('error creating rewards per epoch');
-                throw new Error('error creating rewards per epoch');
+                console.error("error creating rewards per epoch");
+                throw new Error("error creating rewards per epoch");
             }
         }
 
         // Track message with the reward id
         const { isLastMessage } = await poolMessageTracker.trackMessage(
             epochDocument?.id,
-            'wubi',
+            "wubi",
             nfnode.id
         );
 
@@ -88,11 +104,11 @@ export const processWubiRabbitResponse = async (msg: ConsumeMessage) => {
         if (isLastMessage) {
             eventHub.emit(EventName.LAST_REWARD_CREATED, {
                 epochId: epochDocument?.id,
-                type: 'wUBI'
+                type: "wUBI",
             });
         }
     } catch (error) {
-        console.error('🚨 error processing WUBI rabbit response', error);
+        console.error("🚨 error processing WUBI rabbit response", error);
         throw error; // Re-throw the error to be handled by the wrapper
     }
 };

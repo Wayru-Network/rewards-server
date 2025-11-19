@@ -301,7 +301,6 @@ export const regenerateRewards = async () => {
     try {
         const poolPerEpoch = await getPoolPerEpochToRegenerate();
         if (!poolPerEpoch) {
-            console.log("🐇 No pool per epoch to regenerate");
             return;
         }
         // update the pool per epoch status to regenerating rewards

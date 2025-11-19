@@ -22,7 +22,7 @@ export const bootstrap = async () => {
         new PoolProcessTimer();
         initializeCronJobs();
         //@TODO: initialize other requires services here
-        
+
         console.log('✈️  All services initialized successfully ');
     } catch (error) {
         console.error('🚨 Failed to initialize services:', error);
