@@ -50,7 +50,7 @@ spec:
             - name: SOLANA_API_URL
               value: https://devnet.helius-rpc.com/
             - name: RABBIT_RATE_LIMIT_PER_SECOND
-              value: "15"
+              value: "4"
             - name: DISABLED_REWARD_PROGRAM
               value: "true"
             - name: NAS_API_KEY
