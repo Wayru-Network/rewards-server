@@ -43,9 +43,9 @@ export const createDepinStakeRewards = async (payload: CreateDepinStakeRewards) 
 
         const depinStakeRewardId = rows[0].id;
 
-        // Insert into depin_stakes_rewards_hotspot_stake_links
+        // Insert into depin_stakes_rewards_hotspots_stake_links
         await client.query(
-            `INSERT INTO depin_stakes_rewards_hotspot_stake_links (depin_stake_reward_id, hotspots_stakes_id) 
+            `INSERT INTO depin_stakes_rewards_hotspots_stake_links (depin_stake_reward_id, hotspots_stakes_id) 
              VALUES ($1, $2)`,
             [depinStakeRewardId, hotspotStakeId]
         );
