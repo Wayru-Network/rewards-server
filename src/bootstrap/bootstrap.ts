@@ -5,6 +5,7 @@ import { initializeCronJobs } from '@crons/index';
 import { NetworkScoreCalculator } from '@services/pool-per-epoch/pool-network-score-calculator/network-score-calculator.service';
 import { PoolProcessTimer } from '@services/pool-per-epoch/pool-process-timer.service';
 import { poolMessageTracker } from '@services/pool-per-epoch/pool-messages-tracker.service';
+import { calculateDepinStakeRewards } from '@services/depin-stake-rewards/depin-stake.rewards.service';
 
 /**
  * Initialize all services
@@ -12,6 +13,9 @@ import { poolMessageTracker } from '@services/pool-per-epoch/pool-messages-track
 export const bootstrap = async () => {
     try {
         console.log('🛫 Starting services initialization...');
+        //TODO: Remove this after testing
+        calculateDepinStakeRewards(445);
+        return
 
         // Initialize services in sequence (or parallel if possible)
         startEventHub();
@@ -22,7 +26,7 @@ export const bootstrap = async () => {
         new PoolProcessTimer();
         initializeCronJobs();
         //@TODO: initialize other requires services here
-        
+
         console.log('✈️  All services initialized successfully ');
     } catch (error) {
         console.error('🚨 Failed to initialize services:', error);
