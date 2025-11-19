@@ -37,7 +37,7 @@ export const processWupiRabbitResponse = async (msg: ConsumeMessage) => {
         }
 
         // Calculate multiplier
-        const multiplier = getNfNodeMultiplier(nfnode)
+        const deviceTypeMultiplier = getNfNodeMultiplier(nfnode)
         // get boost stake multiplier
         const boostStakeMultiplier = await getBoostStakeMultiplier(nfnode.solana_asset_id)
 
@@ -45,7 +45,13 @@ export const processWupiRabbitResponse = async (msg: ConsumeMessage) => {
         const depinStakeMultiplier = await getDepinStakeMultiplier(nfnode.solana_asset_id)
 
         // calculate final multiplier
-        const finalMultiplier = multiplier * boostStakeMultiplier * depinStakeMultiplier
+        const finalMultiplier = Number(
+            (
+                deviceTypeMultiplier *
+                boostStakeMultiplier *
+                depinStakeMultiplier
+            ).toFixed(1)
+        );
 
         // Calculate score
         const scoreInKb = Number(BigInt(score)) / 1024;
