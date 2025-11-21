@@ -139,7 +139,7 @@ const checkNFNodeEligibility = async (
 export const getEligibleWubiNFNodes = async (
     wayruDeviceId: string,
     rewardSystemProgram: Program<RewardSystem> | null,
-): Promise<{ isEligible: boolean; nfnode: Pick<NfNode, 'id' | 'wayru_device_id' | 'model' | 'solana_asset_id'> }> => {
+): Promise<{ isEligible: boolean; nfnode: Pick<NfNode, 'id' | 'wayru_device_id' | 'model' | 'solana_asset_id'|'latitude'|'longitude'> }> => {
     const nfnode = await getNfNodeByWayruDeviceId(wayruDeviceId);
     const { isEligible, reason } = await checkNFNodeEligibility(
         nfnode,
@@ -152,7 +152,7 @@ export const getEligibleWubiNFNodes = async (
 export const getEligibleWupiNFNodes = async (
     nfnodeId: number,
     rewardSystemProgram: Program<RewardSystem> | null
-): Promise<{ isEligible: boolean; nfnode: Pick<NfNode, 'id' | 'wayru_device_id' | 'model' | 'solana_asset_id'> }> => {
+): Promise<{ isEligible: boolean; nfnode: Pick<NfNode, 'id' | 'wayru_device_id' | 'model' | 'solana_asset_id'|'latitude'|'longitude'> }> => {
     const nfnode = await getNFNodeById(nfnodeId);
     const { isEligible, reason } = await checkNFNodeEligibility(
         nfnode,

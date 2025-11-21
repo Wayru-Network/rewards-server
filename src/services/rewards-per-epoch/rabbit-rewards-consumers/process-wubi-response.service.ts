@@ -12,6 +12,7 @@ import { poolMessageTracker } from "@services/pool-per-epoch/pool-messages-track
 import { poolPerEpochInstance } from "@services/pool-per-epoch/pool-per-epoch-instance.service";
 import { getBoostStakeMultiplier } from "@services/solana/boost-stake/boost-stake.service";
 import { getDepinStakeMultiplier } from "@services/solana/depin-stake/depin-stake.service";
+import { getZoneMultiplier } from "@services/zones/multiplier";
 
 export const processWubiRabbitResponse = async (msg: ConsumeMessage) => {
     try {
@@ -50,12 +51,15 @@ export const processWubiRabbitResponse = async (msg: ConsumeMessage) => {
 
         // get boost stake multiplier
         const boostStakeMultiplier = await getBoostStakeMultiplier(
-            nfnode.solana_asset_id
+            nfnode?.solana_asset_id
         );
+
+        // get zone multiplier
+        const zoneMultiplier = await getZoneMultiplier(nfnode?.latitude,nfnode?.longitude)
 
         // get depin stake multiplier
         const depinStakeMultiplier = await getDepinStakeMultiplier(
-            nfnode.solana_asset_id
+            nfnode?.solana_asset_id
         );
 
         // calculate final multiplier
@@ -63,6 +67,7 @@ export const processWubiRabbitResponse = async (msg: ConsumeMessage) => {
             (
                 deviceTypeMultiplier *
                 boostStakeMultiplier *
+                zoneMultiplier *
                 depinStakeMultiplier
             ).toFixed(1)
         );
