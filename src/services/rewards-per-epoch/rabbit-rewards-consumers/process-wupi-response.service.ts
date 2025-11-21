@@ -9,6 +9,7 @@ import { poolMessageTracker } from "@services/pool-per-epoch/pool-messages-track
 import { poolPerEpochInstance } from "@services/pool-per-epoch/pool-per-epoch-instance.service";
 import { getBoostStakeMultiplier } from "@services/solana/boost-stake/boost-stake.service";
 import { getDepinStakeMultiplier } from "@services/solana/depin-stake/depin-stake.service";
+import { getZoneMultiplier } from "@services/zones/multiplier";
 
 export const processWupiRabbitResponse = async (msg: ConsumeMessage) => {
     try {
@@ -39,16 +40,19 @@ export const processWupiRabbitResponse = async (msg: ConsumeMessage) => {
         // Calculate multiplier
         const deviceTypeMultiplier = getNfNodeMultiplier(nfnode)
         // get boost stake multiplier
-        const boostStakeMultiplier = await getBoostStakeMultiplier(nfnode.solana_asset_id)
+        const boostStakeMultiplier = await getBoostStakeMultiplier(nfnode?.solana_asset_id)
+        // get zone multiplier
+        const zoneMultiplier = await getZoneMultiplier(nfnode?.latitude,nfnode?.longitude)
 
         // get depin stake multiplier
-        const depinStakeMultiplier = await getDepinStakeMultiplier(nfnode.solana_asset_id)
+        const depinStakeMultiplier = await getDepinStakeMultiplier(nfnode?.solana_asset_id)
 
         // calculate final multiplier
         const finalMultiplier = Number(
             (
                 deviceTypeMultiplier *
                 boostStakeMultiplier *
+                zoneMultiplier *
                 depinStakeMultiplier
             ).toFixed(1)
         );
