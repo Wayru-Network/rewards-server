@@ -49,7 +49,7 @@ spec:
             - name: NAS_API
               value: https://nas.api.wayru.tech
             - name: RABBIT_RATE_LIMIT_PER_SECOND
-              value: "4"
+              value: "3"
             - name: DISABLED_REWARD_PROGRAM
               value: "false"
             - name: NAS_API_KEY
