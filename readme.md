@@ -398,4 +398,4 @@ WAYRU
 
 ---
 
-**Note**: This project is now open source. WAYRU no longer exists and cannot provide support. The community is encouraged to maintain and improve this project.
+**Note**: This project is **open source**. Wayru, Inc and The Wayru Foundation are no longer operating entities, and will not provide any kind of support. The community is welcome to use, modify, and improve this codebase.
